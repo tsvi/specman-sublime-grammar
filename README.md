@@ -1,2 +1,2 @@
 # Specman
-Specman package for sublime test
+Specman package for sublime text
