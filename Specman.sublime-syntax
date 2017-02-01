@@ -5,6 +5,8 @@ file_extensions:
   - e
 scope: source.specman
 
+variables:
+  types: (list of \w*|locker|address|body|code|vec|chars|integer|real|bool|int|long|uint|byte|bits|bit|time|string|byte_array|external_pointer)
 
 contexts:
   main:
@@ -15,9 +17,9 @@ contexts:
       push: comment
 
     - scope: keyword.statement.specman
-      match: \b(var|instance|on|compute|start|event|expect|check|that|routine|specman|with|like|list|of|all|radix|hex|dec|bin|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
+      match: \b(var|instance|on|compute|start|event|expect|check|that|routine|specman|with|like|all|radix|hex|dec|bin|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
     
-    - scope: entity.name.function.specman
+    - scope: variable.function.specman meta.function-call
       match: \b(initialize|non_terminal|testgroup|delayed|exit|finish|out|append|print|outf|appendf|post_generate|pre_generate|setup_test|finalize_test|extract_test|init|run|copy|as_a|set_config|dut_error|add|clear|lock|quit|lock|unlock|release|swap|quit|to_string|value|stop_run|crc_8|crc_32|crc_32_flip|get_config|add0|all_indices|and_all|apply|average|count|delete|exists|first_index|get_indices|has|insert|is_a_permutation|is_empty|key|key_exists|key_index|last|last_index|max|max_index|max_value|min|min_index|min_value|or_all|pop|pop0|push|push0|product|resize|reverse|sort|split|sum|top|top0|unique|clear|is_all_iterations|get_enclosing_unit|hdl_path|exec|deep_compare|deep_compare_physical|pack|unpack|warning|error|fatal)\b
     
     - scope: keyword.control.specman
@@ -26,15 +28,32 @@ contexts:
     - scope: keyword.packing.specman
       match: \b(packing|low|high)\b
     
-    - scope: storage.type.specman
-      match: \b(locker|address|body|code|vec|chars|integer|real|bool|int|long|uint|byte|bits|bit|time|string|byte_array|external_pointer)\b
-    
     - scope: constant.language.specman
       match: \b(TRUE|FALSE)\b
-    
-    - scope: meta.preprocessor.specman
-      match: '#ifdef|#ifndef|#else'
-    
+
+    - match: ([0-9]+):([0-9]+)
+      captures:
+        1: constant.numeric.specman
+        2: constant.numeric.specman
+
+    - match: \b([0-9]+)\b
+      scope: constant.numeric.specman
+
+    - scope: constant.numeric.binary.specman
+      match: ((\d+)?'[bB]\s*[0-1_xXzZ?]+|0[bB]\s*[0-1_xXzZ?]+)
+
+    - scope: constant.numeric.integer.specman
+      match: (\d+)?'[dD]\s*[0-9_xXzZ?]+
+
+    - scope: constant.numeric.hex.specman
+      match: ((\d+)?'[hH]\s*[0-9a-fA-F_xXzZ?]+|0[oO]\s*[0-9a-fA-F_xXzZ?]+)
+
+    - scope: constant.numeric.octal.specman
+      match: ((\d+)?'[oO]\s*[0-7_xXzZ?]+|0[xX]\s*[0-9a-fA-F_xXzZ?]+)
+
+    - match: ^\s*(#\s*(?:ifdef|ifndef|else))\b
+      scope: keyword.control.import.specman meta.preprocessor.specman
+
     - scope: keyword.conditional.specman
       match: \b(choose|matches|if|then|else|when|try)\b
     
@@ -43,9 +62,21 @@ contexts:
     
     - scope: keyword.operator.word.specman
       match: \b(and|or|not|xor)\b
-    
+  
+    - scope: keyword.operator.assignment.specman
+      match: (=|+=|-=|*=)
+
+    - scope: keyword.operator.logical.specman
+      match: (==|!=|>|<|===|!===|>=|<=)
+
+    - scope: keyword.operator.arithmetic.specman
+      match: (-|\+|*|/)
+
+    - scope: keyword.operator.bitwise.specman
+      match: (&|\|~|!)
+
     - scope: keyword.temporal.specman
-      match: \b(cycle|sample|events|forever|wait||change||negedge|rise|fall|delay|sync|sim|true|detach|eventually|emit)\b
+      match: \b(cycle|sample|events|forever|wait|change|negedge|rise|fall|delay|sync|sim|true|detach|eventually|emit)\b
     
     - scope: constant.language.specman
       match: \b(MAX_INT|MIN_INT|NULL|UNDEF)\b
@@ -71,18 +102,25 @@ contexts:
     - scope: keyword.fsm.specman
       match: \b(initial|idle|others|posedge|clock|cycles)\b
 
-    - match: ([\w<>'']*)\s*\((.*)\)\s*(is (only|first|also)?)
+    - match: ([\w<>']*)\s*\((.*)?\)\s*(:\s*(.*))?\s*(is (only|first|also)?)
       captures:
         1: meta.function.specman entity.name.function.specman
-        2: variable.parameter.specman
-        3: storage.type.function
+        2: meta.function.parameters.specman variable.parameter.specman
+        4: meta.function.return-type.specman storage.type.specman
+        5: keyword.other.function.specman
+
+    - include: type
 
   string:
-    - meta_scope: string.quoted.double.e
+    - meta_scope: string.quoted.double.specman
     - match: '"'
       pop: true
 
   comment:
-    - meta_scope: comment.e
+    - meta_scope: comment.specman
     - match: \n
       pop: true
+
+  type:
+    - scope: storage.type.specman
+      match: \b{{types}}\b
