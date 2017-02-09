@@ -19,6 +19,14 @@ contexts:
       scope: punctuation.section.source.begin.specman
       push: source
 
+  string:
+    - meta_scope: string.quoted.double.specman
+    - match: \\n|\\t|\\f|\\"|\\\\|\\r
+      scope: constant.character.escape.specman
+    - match: '"'
+      scope: punctuation.definition.string.end.specman
+      pop: true
+
   source:
     - clear_scopes: true
     - meta_content_scope: source.specman
@@ -107,10 +115,16 @@ contexts:
     - match: \b(TRUE|FALSE|NULL|UNDEF|MAX_INT|MIN_INT|MAX_LONGINT|MIN_LONGINT|MAX_UINT|MAX_LONGUINT)\b
       scope: constant.language.specman
 
-#######
-
+    # 1.1.4.5 Literal string
     - match: '"'
+      scope: punctuation.definition.string.begin.specman
       push: string
+
+    # 1.1.4.6 Literal character
+    - match: 0c"[a-zA-Z]"
+      scope: constant.character.literal.specman
+
+#######
 
     - scope: keyword.statement.specman
       match: \b(var|instance|on|compute|start|event|expect|check|that|routine|specman|with|like|all|radix|hex|dec|bin|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
@@ -180,11 +194,6 @@ contexts:
         5: keyword.other.function.specman
 
     - include: type
-
-  string:
-    - meta_scope: string.quoted.double.specman
-    - match: '"'
-      pop: true
 
   comment:
     - meta_scope: comment.line.specman
