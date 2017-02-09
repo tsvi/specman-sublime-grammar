@@ -103,6 +103,10 @@ contexts:
         3: punctuation.separator.literal.specman
         4: storage.modifier.constant.type.specman
 
+    # 1.1.4.4 Predefined constants
+    - match: \b(TRUE|FALSE|NULL|UNDEF|MAX_INT|MIN_INT|MAX_LONGINT|MIN_LONGINT|MAX_UINT|MAX_LONGUINT)\b
+      scope: constant.language.specman
+
 #######
 
     - match: '"'
@@ -119,9 +123,6 @@ contexts:
 
     - scope: keyword.packing.specman
       match: \b(packing|low|high)\b
-
-    - scope: constant.language.specman
-      match: \b(TRUE|FALSE)\b
 
     - match: ^\s*(#\s*(?:ifdef|ifndef|else))\b
       scope: keyword.control.import.specman meta.preprocessor.specman
@@ -149,9 +150,6 @@ contexts:
 
     - scope: keyword.temporal.specman
       match: \b(cycle|sample|events|forever|wait|change|negedge|rise|fall|delay|sync|sim|true|detach|eventually|emit)\b
-
-    - scope: constant.language.specman
-      match: \b(MAX_INT|MIN_INT|NULL|UNDEF)\b
 
     - scope: keyword.define.specman
       match: \b(define|as|computed|type|extend|verilog|vhdl|variable|global|sys)\b
