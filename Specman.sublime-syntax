@@ -212,7 +212,7 @@ contexts:
       push: struct-declaration
 
   methods:
-    - match: (?=\s*.*\s+is\s+)
+    - match: (?=^\s*\w+.*\s+is\s*(\s+(only|first|also)?)\s*{)
       push: method-declaration
 
 #######
