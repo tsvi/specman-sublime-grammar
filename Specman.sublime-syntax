@@ -127,9 +127,9 @@ contexts:
 
   struct-declaration:
     - meta_content_scope: meta.class.body.specman
+    - include: comments
     - include: literals
     - include: methods
-    - include: comments
     - include: tbd
     - match: \}
       scope: punctuation.section.method.end.specman
@@ -178,8 +178,8 @@ contexts:
 
   method-body:
     - meta_content_scope: meta.function.body.specman
-    - include: literals
     - include: comments
+    - include: literals
     - include: tbd
     - match: (?=\})
       scope: punctuation.section.class.end.specman
@@ -188,9 +188,9 @@ contexts:
   source:
     - clear_scopes: true
     - meta_content_scope: source.specman
+    - include: comments
     - include: literals
     - include: methods
-    - include: comments
     - include: tbd
     - match: ^('>)
       scope: punctuation.section.source.end.specman
