@@ -11,6 +11,7 @@ scope: text.specman
 
 variables:
   types: (list of \w*|locker|address|body|code|vec|chars|integer|real|bool|int|long|uint|byte|bits|bit|time|string|byte_array|external_pointer)
+  valid_name: ([a-zA-Z]([a-zA-Z0-9_]+)?)
 
 contexts:
   main:
@@ -129,6 +130,16 @@ contexts:
       scope: meta.preprocessor.macro.specman keyword.control.import.define.specman
       # TODO: push onto stack and parse macro definition/define
 
+    # 3.2.1 Struct
+    - match: ^\s*(struct)\s*({{valid_name}})(\s+(like)\s+({{valid_name}}))?\s*({)
+      captures:
+        1: storage.type.struct.specman
+        2: meta.class.identifier.specman entity.name.class.specman
+        5: keyword.declaration.like.specman
+        6: entity.other.inherited-class.specman
+        8: punctuation.section.class.begin.specman
+      #TODO: fix it up, add meta scope
+
 #######
 
     - scope: keyword.statement.specman
@@ -174,7 +185,7 @@ contexts:
       match: \b(as|computed|type|extend|verilog|vhdl|variable|global|sys)\b
 
     - scope: entity.name.class.specman
-      match: \b(struct|unit)\b
+      match: \b(unit)\b
 
     - scope: keyword.control.import.specman
       match: \b(import)\b
