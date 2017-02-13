@@ -214,7 +214,7 @@ contexts:
       push: struct-declaration
 
   methods:
-    - match: (?=^\s*\w+?\s+[a-zA-Z](?:[a-zA-Z0-9_]+)?\s*\()
+    - match: (?=^\s*(?:private|static|final)?\s+[a-zA-Z](?:[a-zA-Z0-9_]+)?\s*\()
       push: method-declaration
 
 #######
