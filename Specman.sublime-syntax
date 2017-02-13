@@ -12,6 +12,7 @@ scope: text.specman
 variables:
   types: (list of \w*|locker|address|body|code|vec|chars|integer|real|bool|int|long|uint|byte|bits|bit|time|string|byte_array|external_pointer)
   valid_name: ([a-zA-Z](?:[a-zA-Z0-9_]+)?)
+  valid_type: ((?:list\s+of\s+)?[a-zA-Z](?:[a-zA-Z0-9_]+)?(?:\s*\(\s*bits\s*:\s*\d+\s*\))?)
 
 contexts:
   main:
@@ -143,7 +144,7 @@ contexts:
     - match: \(
       scope: punctuation.section.function.parameter-list.begin.specman
       push: method-parameters
-    - match: :\s*{{valid_name}}
+    - match: :\s*{{valid_type}}
       scope: meta.function.return-type.specman storage.type.specman
     - match: (\@)([a-zA-Z0-9_.]+)
       captures:
@@ -165,11 +166,12 @@ contexts:
 
   method-parameters:
     - meta_content_scope: meta.function.parameters.specman
-    - match: (?:{{valid_name}}\s*(:)\s*((?:\*)?{{valid_name}}))
+    - match: (?:{{valid_name}}\s*(:)\s*(?:(\*)?{{valid_type}}))
       captures:
         1: variable.parameter.specman
         2: punctuation.separator.parameter.specman
-        3: storage.type.specman meta.function.parameters.specman
+        3: punctuation.accessor.parameter.specman
+        4: storage.type.specman
     - match: (,)
       scope: punctuation.separator.parameter.specman
     - match: \)
