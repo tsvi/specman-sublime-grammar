@@ -10,19 +10,26 @@ scope: source.specman
 variables:
   types: (list of \w*|locker|address|body|code|vec|chars|integer|real|bool|int|long|uint|byte|bits|bit|time|string|byte_array|external_pointer)
   # The following should include all keywords which are invalid as a user defined name
-  invalid_names: if|assert|error|compute|message
+  built_in_functions: assert|error|compute|message|append
+  invalid_names: if|{{built_in_functions}}
   valid_name: ([a-zA-Z](?:[a-zA-Z0-9_]+)?(?<!{{invalid_names}}))
   valid_type: ((?:list\s+of\s+)?[a-zA-Z](?:[a-zA-Z0-9_]+)?(?:\s*\(\s*bits\s*:\s*\d+\s*\))?)
   struct_access: (package|protected|private)
 
 contexts:
   main:
+    - include: code
+
+  code:
     - include: comments
-    - include: macros
     - include: structs
+    - include: macros
     - include: literals
+    - include: built-in-function-calls
     - include: methods
     - include: inline-generation
+    - include: struct-allocation
+    - include: code-blocks
     - include: tbd
 
   comments:
@@ -199,9 +206,10 @@ contexts:
      - include: comments
      - include: macros
      - include: literals
-     - include: tbd
      - include: inline-generation
      - include: struct-allocation
+     - include: code-blocks
+     - include: tbd
 
     # 1.1.5.2 Macros
   macros:
@@ -227,7 +235,7 @@ contexts:
         4: entity.other.inherited-class.specman
         5: punctuation.section.class.begin.specman
       push: struct-contents
-    - match: (extend)\s+(?:{{valid_name}}\s+)+(?={{valid_name}}\s*\{)
+    - match: (extend)\s+(?:{{valid_name}}\s+)+(?={{valid_name}}?\s*\{)
       captures:
         1: storage.type.struct.extend.specman
         2: meta.class.identifier.specman entity.name.class.specman
@@ -241,10 +249,7 @@ contexts:
   struct-contents:
     - meta_content_scope: meta.class.body.specman
     - include: comments
-    - include: literals
-    - include: methods
-    - include: macros
-    - include: tbd
+    - include: code
     - match: keep
       scope: keyword.other.constraint.specman
       push: constraint-def
@@ -275,6 +280,7 @@ contexts:
           pop: true
     - match: ;
       pop: true
+    - include: code
 
   inline-generation:
     - match: \s+(gen)\s+(\w+)
@@ -323,6 +329,31 @@ contexts:
       captures:
         1: storage.type.specman
         2: variable.other.specman
+
+  built-in-function-calls:
+    - match: ({{built_in_functions}})\s*(\()
+      captures:
+        1: variable.function.builtin.specman
+        2: punctuation.section.parens.begin.specman
+      set:
+        - meta_scope: meta.function-call.builtin.specman
+        - match: (\))\s*(;)
+          pop: true
+          captures:
+            1: punctuation.section.parens.end.specman
+            2: punctuation.terminator.specman
+        - include: code
+
+  code-blocks:
+    - match: \{
+      scope: punctuation.section.block.begin.specman
+      push:
+      - match: (\})\s*(;)
+        pop: true
+        captures:
+          1: punctuation.section.block.end.specman
+          2: punctuation.terminator.specman
+      - include: code
 
 
 #######
