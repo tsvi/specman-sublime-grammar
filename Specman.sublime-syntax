@@ -10,7 +10,7 @@ scope: source.specman
 variables:
   types: (list of \w*|locker|address|body|code|vec|chars|integer|real|bool|int|long|uint|byte|bits|bit|time|string|byte_array|external_pointer)
   # The following should include all keywords which are invalid as a user defined name
-  built_in_functions: assert|error|compute|message|append
+  built_in_functions: assert|error|compute|message|append|dut_error
   invalid_names: if|{{built_in_functions}}
   valid_name: ([a-zA-Z](?:[a-zA-Z0-9_]+)?(?<!{{invalid_names}}))
   valid_type: ((?:list\s+of\s+)?[a-zA-Z](?:[a-zA-Z0-9_]+)?(?:\s*\(\s*bits\s*:\s*\d+\s*\))?)
@@ -155,13 +155,30 @@ contexts:
       push: method-declaration
 
   method-declaration:
-    - match: (private|static|final)?(?:\s+){{valid_name}}\s*(?=\()
+    - match: (?!\s+is\s+)
+      pop: true
+    - match: (private|static|final)?(?:\s+){{valid_name}}\s*(\()
       captures:
         1: storage.modifier.function.specman
         2: meta.method.identifier.specman entity.name.function.specman
-    - match: \(
-      scope: meta.method.parameters.specman punctuation.section.parens.begin.specman
+        3: meta.method.parameters.specman punctuation.section.parens.begin.specman
       push: method-parameters
+
+  method-parameters:
+    - meta_content_scope: meta.method.parameters.specman
+    - match: (?:{{valid_name}}\s*(:)\s*(?:(\*)?{{valid_type}}))
+      captures:
+        1: variable.parameter.specman
+        2: punctuation.separator.parameter.specman
+        3: punctuation.accessor.parameter.specman
+        4: storage.type.specman
+    - match: (,)
+      scope: punctuation.separator.parameter.specman
+    - match: \)
+      scope: punctuation.section.parens.end.specman
+      set: method-declaration-end
+
+  method-declaration-end:
     - match: (:)\s*{{valid_type}}
       captures:
         1: punctuation.separator.return-type.specman
@@ -182,20 +199,6 @@ contexts:
       scope: punctuation.section.method.begin.specman
       set: method-contents
 
-  method-parameters:
-    - meta_content_scope: meta.method.parameters.specman
-    - match: (?:{{valid_name}}\s*(:)\s*(?:(\*)?{{valid_type}}))
-      captures:
-        1: variable.parameter.specman
-        2: punctuation.separator.parameter.specman
-        3: punctuation.accessor.parameter.specman
-        4: storage.type.specman
-    - match: (,)
-      scope: punctuation.separator.parameter.specman
-    - match: (\))
-      scope: meta.method.parameters.specman punctuation.section.parens.end.specman
-      pop: true
-
   method-contents:
      - meta_content_scope: meta.method.body.specman
      - match: (\})\s*(;)
@@ -208,6 +211,7 @@ contexts:
      - include: literals
      - include: inline-generation
      - include: struct-allocation
+     - include: built-in-function-calls
      - include: code-blocks
      - include: tbd
 
