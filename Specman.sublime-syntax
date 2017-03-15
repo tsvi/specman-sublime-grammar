@@ -151,7 +151,7 @@ contexts:
       scope: constant.character.literal.specman
 
   methods:
-    - match: (?=^\s*(?:private|static|final)?\s+[a-zA-Z](?:[a-zA-Z0-9_]+)?\s*\()
+    - match: (?=(?:private|static|final)?\s+[a-zA-Z](?:[a-zA-Z0-9_]+)?\s*\()
       push: method-declaration
 
   method-declaration:
@@ -191,10 +191,11 @@ contexts:
       captures:
         1: keyword.other.function.specman
         2: keyword.modifier.function.specman
-    - match: (empty)\s*;
+    - match: (empty)\s*(;)
       captures:
-        1: keyword.other.function.specman;
-      pop: true;
+        1: keyword.other.function.specman
+        2: punctuation.terminator.specman
+      pop: true
     - match: \{
       scope: punctuation.section.method.begin.specman
       set: method-contents
@@ -239,7 +240,7 @@ contexts:
         4: entity.other.inherited-class.specman
         5: punctuation.section.class.begin.specman
       push: struct-contents
-    - match: (extend)\s+(?:{{valid_name}}\s+)+(?={{valid_name}}?\s*\{)
+    - match: (extend)\s+((?:{{valid_name}}\s+)?)+(?={{valid_name}}\s*\{)
       captures:
         1: storage.type.struct.extend.specman
         2: meta.class.identifier.specman entity.name.class.specman
@@ -259,7 +260,7 @@ contexts:
       push: constraint-def
     # TODO: Need to complete with  [[min-val .. max-val]]  [((bits | bytes):num)] [= init-value]
     #       Note: min max and init val can be a MVL literal as well as an enum or string, we should define a variable for legal "values"
-    - match: (?:{{struct_access}}\s+)?(static\s+)?(const\s+)?(!\s*)?(%\s*)?(?:{{valid_name}}\s*)(?:(\:)\s*{{valid_type}}\s*)?
+    - match: (?:{{struct_access}}\s+)?(static\s+)?(const\s+)?(!\s*)?(%\s*)?(?:{{valid_name}}\s*)(?:(\:)\s*{{valid_type}}\s*)?(;)
       captures:
         1: storage.modifier.access.specman
         2: storage.modifier.static.specman
@@ -269,6 +270,7 @@ contexts:
         6: variable.other.specman
         7: punctuation.separator.type.specman
         8: storage.type.specman
+        9: punctuation.terminator.specman
     - match: (\})\s*(;)
       pop: true
       captures:
@@ -284,7 +286,6 @@ contexts:
           pop: true
     - match: ;
       pop: true
-    - include: code
 
   inline-generation:
     - match: \s+(gen)\s+(\w+)
@@ -333,6 +334,10 @@ contexts:
       captures:
         1: storage.type.specman
         2: variable.other.specman
+    - match: ;
+      scope: punctuation.terminator.specman
+      pop: true
+
 
   built-in-function-calls:
     - match: ({{built_in_functions}})\s*(\()
@@ -352,12 +357,13 @@ contexts:
     - match: \{
       scope: punctuation.section.block.begin.specman
       push:
-      - match: (\})\s*(;)
+      - match: (?=\}\s*;)
         pop: true
-        captures:
-          1: punctuation.section.block.end.specman
-          2: punctuation.terminator.specman
       - include: code
+    - match: (\})\s*(;)
+      captures:
+        1: punctuation.section.block.end.specman
+        2: punctuation.terminator.specman
 
 
 #######
