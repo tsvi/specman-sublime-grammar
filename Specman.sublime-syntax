@@ -240,7 +240,13 @@ contexts:
         4: entity.other.inherited-class.specman
         5: punctuation.section.class.begin.specman
       push: struct-contents
-    - match: (extend)\s+((?:{{valid_name}}\s+)?)+(?={{valid_name}}\s*\{)
+    - match: (extend)\s+{{valid_name}}\s*(\{)
+      captures:
+        1: storage.type.struct.extend.specman
+        2: meta.class.identifier.specman entity.name.class.specman
+        3: punctuation.section.class.begin.specman
+      set: struct-contents
+    - match: (extend)\s+(?:{{valid_name}}\s+)+(?={{valid_name}}\s*\{)
       captures:
         1: storage.type.struct.extend.specman
         2: meta.class.identifier.specman entity.name.class.specman
