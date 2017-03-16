@@ -151,7 +151,7 @@ contexts:
       scope: constant.character.literal.specman
 
   methods:
-    - match: (?=(?:private|static|final)?\s+[a-zA-Z](?:[a-zA-Z0-9_]+)?\s*\()
+    - match: (?=^\s*(?:private|static|final)?\s+[a-zA-Z](?:[a-zA-Z0-9_]+)?\s*\()
       push: method-declaration
 
   method-declaration:
@@ -202,11 +202,6 @@ contexts:
 
   method-contents:
      - meta_content_scope: meta.method.body.specman
-     - match: (\})\s*(;)
-       captures:
-         1: punctuation.section.method.end.specman
-         2: punctuation.terminator.specman
-       pop: true
      - include: comments
      - include: macros
      - include: literals
@@ -215,6 +210,11 @@ contexts:
      - include: built-in-function-calls
      - include: code-blocks
      - include: tbd
+     - match: (\})\s*(;)
+       captures:
+         1: punctuation.section.method.end.specman
+         2: punctuation.terminator.specman
+       pop: true
 
     # 1.1.5.2 Macros
   macros:
@@ -323,6 +323,7 @@ contexts:
         2: punctuation.section.block.begin.specman
       push:
         - meta_content_scope: meta.block.action.specman
+        - include: code
         - match: (?=(\})\s*(;))
           pop: true
     - match: (\})\s*(;)
@@ -338,15 +339,14 @@ contexts:
       scope: punctuation.terminator.specman
       pop: true
 
-
   built-in-function-calls:
     - match: ({{built_in_functions}})\s*(\()
       captures:
         1: variable.function.builtin.specman
         2: punctuation.section.parens.begin.specman
-      set:
+      push:
         - meta_scope: meta.function-call.builtin.specman
-        - match: (\))\s*(;)
+        - match: (\))\s*(;)?
           pop: true
           captures:
             1: punctuation.section.parens.end.specman
@@ -357,13 +357,11 @@ contexts:
     - match: \{
       scope: punctuation.section.block.begin.specman
       push:
-      - match: (?=\}\s*;)
+      - meta_content_scope: meta.code_block.for_debug
+      - match: \}
+        scope: punctuation.section.block.end.specman
         pop: true
       - include: code
-    - match: (\})\s*(;)
-      captures:
-        1: punctuation.section.block.end.specman
-        2: punctuation.terminator.specman
 
 
 #######
