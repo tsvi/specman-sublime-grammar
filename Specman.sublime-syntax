@@ -374,7 +374,7 @@ contexts:
       - include: code
 
   preprocessor:
-    - match: \s*(?:\}\s*)?(#\s*(?:ifdef|ifndef|else))\s*(`{{valid_name}})?\s*(\{)
+    - match: \s*(?:\}\s*)?(#\s*(?:ifdef|ifndef|else))\s*((?:`)?{{valid_name}})?\s*(\{)
       captures:
         1: keyword.control.import.specman
         2: variable.other.define.specman
