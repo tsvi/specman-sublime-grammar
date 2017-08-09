@@ -286,6 +286,8 @@ contexts:
   constraint-def:
     # TODO: Complete definition of constraints based on chapter 11.1
     - meta_content_scope: meta.constraint.specman
+    - include: literals
+    - include: tbd
     - match: \{
       set:
         - match: \};
