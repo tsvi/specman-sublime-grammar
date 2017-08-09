@@ -21,6 +21,7 @@ contexts:
     - include: code
 
   code:
+    - include: preprocessor
     - include: comments
     - include: structs
     - include: macros
@@ -371,6 +372,19 @@ contexts:
         pop: true
       - include: code
 
+  preprocessor:
+    - match: ^\s*(#\s*(?:ifdef|ifndef|else))\s*(`{{valid_name}})\s*(\{)
+      scope: meta.preprocessor.specman
+      captures:
+        1: keyword.control.import.specman
+        2: variable.other.define.specman
+        4: punctuation.section.block.begin.specman
+      push:
+      - match: \}
+        scope: punctuation.section.block.end.specman
+        pop: true
+      - include: code
+
 
 #######
 
@@ -386,9 +400,6 @@ contexts:
 
     - scope: keyword.packing.specman
       match: \b(packing|low|high)\b
-
-    - match: ^\s*(#\s*(?:ifdef|ifndef|else))\b
-      scope: keyword.control.import.specman meta.preprocessor.specman
 
     - scope: keyword.conditional.specman
       match: \b(choose|matches|if|then|else|when|try)\b
