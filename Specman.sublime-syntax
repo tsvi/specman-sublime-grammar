@@ -21,8 +21,8 @@ contexts:
     - include: code
 
   code:
-    - include: preprocessor
     - include: comments
+    - include: preprocessor
     - include: structs
     - include: macros
     - include: literals
@@ -30,8 +30,8 @@ contexts:
     - include: methods
     - include: inline-generation
     - include: struct-allocation
-    - include: code-blocks
     - include: tbd
+    - include: code-blocks
 
   comments:
     # 1.1.3 Comments and White space
@@ -374,7 +374,7 @@ contexts:
       - include: code
 
   preprocessor:
-    - match: ^\s*(#\s*(?:ifdef|ifndef|else))\s*(`{{valid_name}})\s*(\{)
+    - match: \s*(?:\}\s*)?(#\s*(?:ifdef|ifndef|else))\s*(`{{valid_name}})?\s*(\{)
       scope: meta.preprocessor.specman
       captures:
         1: keyword.control.import.specman
@@ -403,7 +403,7 @@ contexts:
       match: \b(packing|low|high)\b
 
     - scope: keyword.conditional.specman
-      match: \b(choose|matches|if|then|else|when|try)\b
+      match: \b(choose|matches|if|then|(?<!#\s)else|when|try)\b
 
     - scope: keyword.conditional.specman
       match: \b(case|casex|casez|default)\b
