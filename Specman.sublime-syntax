@@ -285,9 +285,12 @@ contexts:
 
   constraint-def:
     # TODO: Complete definition of constraints based on chapter 11.1
-    - meta_content_scope: meta.constraint.specman
+    - meta_scope: meta.constraint.specman
     - include: comments
-    - match: (keep\s+)(soft\s+)?(?:{{valid_name}}\s*)(in|==|!=|<|>)?(.*)?(;)
+    - include: literals
+    # TODO: Allow for literals/function calls after == >=
+    # TODO: Support select
+    - match: (keep\s+)(soft\s+)?(?:{{valid_name}}\s*)(in|==|!=|>=|<=|>|<)?(.*)?(;)
       captures:
         1: keyword.other.constraint.specman
         2: keyword.modifier.constraint.specman
@@ -307,7 +310,6 @@ contexts:
       captures:
         1: punctuation.section.constraint_loop.end.specman
       pop: true
-    - include: literals
     - include: tbd
 
   constraint-body:
