@@ -400,7 +400,7 @@ contexts:
         1: keyword.control.import.specman
         2: variable.other.define.specman
         4: punctuation.section.block.begin.specman
-      set:
+      push:
       - meta_scope: meta.preprocessor.specman
       - include: code
       - include: struct-contents
