@@ -262,8 +262,7 @@ contexts:
     - meta_content_scope: meta.class.body.specman
     - include: comments
     - include: code
-    - match: keep
-      scope: keyword.other.constraint.specman
+    - match: (?=keep)
       push: constraint-def
     # TODO: Need to complete with  [[min-val .. max-val]]  [((bits | bytes):num)] [= init-value]
     #       Note: min max and init val can be a MVL literal as well as an enum or string, we should define a variable for legal "values"
@@ -288,11 +287,33 @@ contexts:
     # TODO: Complete definition of constraints based on chapter 11.1
     - meta_content_scope: meta.constraint.specman
     - include: comments
-    - match: \{
-      push:
-        - match: (?=\})
-          pop: true
-    - match: (\}|;)
+    - match: (keep\s+)(soft\s+)?(?:{{valid_name}}\s*)(in|==|!=|<|>)?(.*)?(;)
+      captures:
+        1: keyword.other.constraint.specman
+        2: keyword.modifier.constraint.specman
+        3: variable.other.specman
+        4: keyword.operator.logical.specman
+        6: punctuation.terminator.specman
+      pop: true
+    - match: (keep\s+)(soft\s+)?(for\s+each\s+in\s+)(?:{{valid_name}}\s*)(\{)
+      captures:
+        1: keyword.other.constraint.specman
+        2: keyword.modifier.constraint.specman
+        3: keyword.keyword.control.specman
+        4: variable.other.specman
+        5: punctuation.section.constraint_loop.begin.specman
+      push: constraint-body
+    - match: (\};)
+      captures:
+        1: punctuation.section.constraint_loop.end.specman
+      pop: true
+    - include: literals
+    - include: tbd
+
+  constraint-body:
+    - include: comments
+    - include: code-blocks
+    - match: (?=\})
       pop: true
     - include: literals
     - include: tbd
