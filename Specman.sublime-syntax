@@ -10,7 +10,7 @@ scope: source.specman
 variables:
   types: (list of \w*|locker|address|body|code|vec|chars|integer|real|bool|int|long|uint|byte|bits|bit|time|string|byte_array|external_pointer)
   # The following should include all keywords which are invalid as a user defined name
-  built_in_functions: assert|error|compute|message|append|dut_error
+  built_in_functions: assert|error|compute|message|append|dut_error|warning
   invalid_names: if|{{built_in_functions}}
   valid_name: ([a-zA-Z](?:[a-zA-Z0-9_]+)?(?<!{{invalid_names}}))
   valid_type: ((?:list\s+of\s+)?[a-zA-Z](?:[a-zA-Z0-9_]+)?(?:\s*\(\s*bits\s*:\s*\d+\s*\))?)
@@ -415,10 +415,10 @@ contexts:
 
   tbd:
     - scope: keyword.statement.specman
-      match: \b(var|instance|on|compute|start|event|expect|check|that|routine|specman|like|all|radix|hex|dec|bin|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
+      match: \b(var|instance|on|start|event|expect|check|that|routine|specman|like|all|radix|hex|dec|bin|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
 
     - scope: variable.function.specman meta.function-call
-      match: \b(initialize|non_terminal|testgroup|delayed|exit|finish|out|append|print|outf|appendf|post_generate|pre_generate|setup_test|finalize_test|extract_test|init|run|copy|as_a|set_config|dut_error|add|clear|lock|quit|lock|unlock|release|swap|quit|to_string|value|stop_run|crc_8|crc_32|crc_32_flip|get_config|add0|all_indices|and_all|apply|average|count|delete|exists|first_index|get_indices|has|insert|is_a_permutation|is_empty|key|key_exists|key_index|last|last_index|max|max_index|max_value|min|min_index|min_value|or_all|pop|pop0|push|push0|product|resize|reverse|sort|split|sum|top|top0|unique|clear|is_all_iterations|get_enclosing_unit|hdl_path|exec|deep_compare|deep_compare_physical|pack|unpack|warning|error|fatal)\b
+      match: \b(initialize|non_terminal|testgroup|delayed|exit|finish|out|print|outf|appendf|post_generate|pre_generate|setup_test|finalize_test|extract_test|init|run|copy|as_a|set_config|add|clear|lock|quit|lock|unlock|release|swap|quit|to_string|value|stop_run|crc_8|crc_32|crc_32_flip|get_config|add0|all_indices|and_all|apply|average|count|delete|exists|first_index|get_indices|has|insert|is_a_permutation|is_empty|key|key_exists|key_index|last|last_index|max|max_index|max_value|min|min_index|min_value|or_all|pop|pop0|push|push0|product|resize|reverse|sort|split|sum|top|top0|unique|clear|is_all_iterations|get_enclosing_unit|hdl_path|exec|deep_compare|deep_compare_physical|pack|unpack|fatal)\b
 
     - scope: keyword.control.specman
       match: \b(until|repeat|while|for|from|to|step|each|do|break|continue|before|next|sequence|always|-kind|network|index|it|me|in|return|result|select)\b
