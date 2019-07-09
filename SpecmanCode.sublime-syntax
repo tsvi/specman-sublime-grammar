@@ -1,0 +1,458 @@
+%YAML 1.2
+---
+name: SpecmanCode
+
+# Note: Numbered comments refer to chapters in the Specman e Language reference
+scope: source.specman
+hidden: true
+
+variables:
+  types: (list of \w*|locker|address|body|code|vec|chars|integer|real|bool|int|long|uint|byte|bits|bit|time|string|byte_array|external_pointer)
+  # The following should include all keywords which are invalid as a user defined name
+  built_in_functions: assert|error|compute|message|append|dut_error|warning
+  invalid_names: if|{{built_in_functions}}
+  valid_name: ([a-zA-Z](?:[a-zA-Z0-9_]+)?(?<!{{invalid_names}}))
+  valid_type: ((?:list\s+of\s+)?[a-zA-Z](?:[a-zA-Z0-9_]+)?(?:\s*\(\s*bits\s*:\s*\d+\s*\))?)
+  struct_access: (package|protected|private)
+
+contexts:
+  main:
+    - include: code
+
+  code:
+    - include: comments
+    - include: preprocessor
+    - include: structs
+    - include: macros
+    - include: literals
+    - include: built-in-function-calls
+    - include: methods
+    - include: inline-generation
+    - include: struct-allocation
+    - include: tbd
+    - include: code-blocks
+
+  comments:
+    # 1.1.3 Comments and White space
+    - match: (//|--)
+      scope: punctuation.definition.comment.specman
+      push: comment-contents
+
+  comment-contents:
+    - meta_scope: comment.line.specman
+    - match: \n
+      pop: true
+
+  string:
+    - meta_scope: string.quoted.double.specman
+    - match: \\n|\\t|\\f|\\"|\\\\|\\r
+      scope: constant.character.escape.specman
+    - match: '"'
+      scope: punctuation.definition.string.end.specman
+      pop: true
+
+  literals:
+    # 1.1.4.3 MVL literals
+
+    - match: \b((\d+)(')([oO])[0-7]([0-7xXzZuUlLhHwWnN_]+)?)\b
+      captures:
+        1: constant.numeric.mvl.octal.specman
+        2: storage.modifier.constant.size.specman
+        3: punctuation.separator.literal.specman
+        4: storage.modifier.constant.type.specman
+
+    - match: \b((\d+)(')([hHxX])[0-9a-fA-F]([0-9a-fA-FxXzZuUlLhHwWnN_]+)?)\b
+      captures:
+        1: constant.numeric.mvl.hex.specman
+        2: storage.modifier.constant.size.specman
+        3: punctuation.separator.literal.specman
+        4: storage.modifier.constant.type.specman
+
+    - match: \b((\d+)(')([bB])[0-1]([0-1xXzZuUlLhHwWnN_]+)?)\b
+      captures:
+        1: constant.numeric.mvl.binary.specman
+        2: storage.modifier.constant.size.specman
+        3: punctuation.separator.literal.specman
+        4: storage.modifier.constant.type.specman
+
+    # 1.1.4.1 Unsized numbers
+    - match: \b(-?([0-9_]+[kKmM]?))\b
+      scope: constant.numeric.unsized.integer.specman
+
+    - match: \b(0([bB])\s*[0-1_xXzZ?]+)\b
+      captures:
+        1: constant.numeric.unsized.binary.specman
+        2: storage.modifier.constant.type.specman
+
+    - match: \b(0([xX])\s*[0-9a-fA-F_xXzZ?]+)\b
+      captures:
+        1: constant.numeric.unsized.hex.specman
+        2: storage.modifier.constant.type.specman
+
+    - match: \b(0([oO])\s*[0-9a-fA-F_xXzZ?]+)\b
+      captures:
+        1: constant.numeric.unsized.octal.specman
+        2: storage.modifier.constant.type.specman
+
+    # 1.1.4.2 Sized numbers
+
+    - match: \b((\d+)?(')([dD])\s*[0-9_]+)\b
+      captures:
+        1: constant.numeric.sized.integer.specman
+        2: storage.modifier.constant.size.specman
+        3: punctuation.separator.literal.specman
+        4: storage.modifier.constant.type.specman
+
+    - match: \b((\d+)?(')([bB])\s*[0-1_]+)\b
+      captures:
+        1: constant.numeric.sized.binary.specman
+        2: storage.modifier.constant.size.specman
+        3: punctuation.separator.literal.specman
+        4: storage.modifier.constant.type.specman
+
+    - match: \b((\d+)?(')([hHxX])\s*[0-9a-fA-F_]+)\b
+      captures:
+        1: constant.numeric.sized.hex.specman
+        2: storage.modifier.constant.size.specman
+        3: punctuation.separator.literal.specman
+        4: storage.modifier.constant.type.specman
+
+    - match: \b((\d+)?(')([oO])\s*[0-7_]+)\b
+      captures:
+        1: constant.numeric.sized.octal.specman
+        2: storage.modifier.constant.size.specman
+        3: punctuation.separator.literal.specman
+        4: storage.modifier.constant.type.specman
+
+    # 1.1.4.4 Predefined constants
+    - match: \b(TRUE|FALSE|NULL|UNDEF|MAX_INT|MIN_INT|MAX_LONGINT|MIN_LONGINT|MAX_UINT|MAX_LONGUINT)\b
+      scope: constant.language.specman
+
+    # 1.1.4.5 Literal string
+    - match: '"'
+      scope: punctuation.definition.string.begin.specman
+      push: string
+
+    # 1.1.4.6 Literal character
+    - match: 0c"[a-zA-Z]"
+      scope: constant.character.literal.specman
+
+  methods:
+    - match: (?=^\s*(?:private|static|final)?\s+[a-zA-Z](?:[a-zA-Z0-9_]+)?\s*\()
+      push: method-declaration
+
+  method-declaration:
+    - match: (?!\s+is\s+)
+      pop: true
+    - match: (private|static|final)?(?:\s+){{valid_name}}\s*(\()
+      captures:
+        1: storage.modifier.function.specman
+        2: meta.method.identifier.specman entity.name.function.specman
+        3: meta.method.parameters.specman punctuation.section.parens.begin.specman
+      push: method-parameters
+
+  method-parameters:
+    - meta_content_scope: meta.method.parameters.specman
+    - match: (?:{{valid_name}}\s*(:)\s*(?:(\*)?{{valid_type}}))
+      captures:
+        1: variable.parameter.specman
+        2: punctuation.separator.parameter.specman
+        3: punctuation.accessor.parameter.specman
+        4: storage.type.specman
+    - match: (,)
+      scope: punctuation.separator.parameter.specman
+    - match: \)
+      scope: punctuation.section.parens.end.specman
+      set: method-declaration-end
+
+  method-declaration-end:
+    - match: (:)\s*{{valid_type}}
+      captures:
+        1: punctuation.separator.return-type.specman
+        2: meta.method.return-type.specman storage.type.specman
+    - match: (\@)([a-zA-Z0-9_.]+)
+      captures:
+        1: punctuation.accessor.event.specman
+        2: keyword.control.function.event.specman
+    - match: (is)(?:\s+)(only|first|also)?
+      captures:
+        1: keyword.other.function.specman
+        2: keyword.modifier.function.specman
+    - match: (empty)\s*(;)
+      captures:
+        1: keyword.other.function.specman
+        2: punctuation.terminator.specman
+      pop: true
+    - match: \{
+      scope: punctuation.section.method.begin.specman
+      set: method-contents
+
+  method-contents:
+     - meta_content_scope: meta.method.body.specman
+     - include: comments
+     - include: macros
+     - include: literals
+     - include: inline-generation
+     - include: struct-allocation
+     - include: built-in-function-calls
+     - include: code-blocks
+     - include: tbd
+     - match: (\})\s*(;)
+       captures:
+         1: punctuation.section.method.end.specman
+         2: punctuation.terminator.specman
+       pop: true
+
+    # 1.1.5.2 Macros
+  macros:
+    - match: ^\s*(define)\b
+      scope: meta.preprocessor.macro.specman keyword.control.import.define.specman
+      # TODO: push onto stack and parse macro definition/define
+
+  structs:
+      # 3.2.1 Structs
+    - match: (?=^\s*struct\s+{{valid_name}}(?:\s+(like)\s+{{valid_name}})?\s*\{)
+      push: struct-declaration
+    - match: (?=extend\s+({{valid_name}}\s+)+\{)
+      push: struct-declaration
+    - match: (?=^\s*unit\s+{{valid_name}}(?:\s+(like)\s+{{valid_name}})?\s*\{)
+      push: struct-declaration
+
+  struct-declaration:
+    - match: (struct|unit)\s+{{valid_name}}(?:\s+(like)\s+{{valid_name}})?\s*(\{)
+      captures:
+        1: storage.type.struct.specman
+        2: meta.class.identifier.specman entity.name.class.specman
+        3: keyword.declaration.like.specman
+        4: entity.other.inherited-class.specman
+        5: punctuation.section.class.begin.specman
+      push: struct-contents
+    - match: (extend)\s+{{valid_name}}\s*(\{)
+      captures:
+        1: storage.type.struct.extend.specman
+        2: meta.class.identifier.specman entity.name.class.specman
+        3: punctuation.section.class.begin.specman
+      set: struct-contents
+    - match: (extend)\s+(?:{{valid_name}}\s+)+(?={{valid_name}}\s*\{)
+      captures:
+        1: storage.type.struct.extend.specman
+        2: meta.class.identifier.specman entity.name.class.specman
+      set:
+        - match: (?:{{valid_name}}\s*)
+          scope: entity.other.inherited-class.specman
+        - match: \{
+          scope: punctuation.section.class.begin.specman
+          set: struct-contents
+
+  struct-contents:
+    - meta_content_scope: meta.class.body.specman
+    - include: comments
+    - include: code
+    - match: (?=keep)
+      push: constraint-def
+    # TODO: Need to complete with  [[min-val .. max-val]]  [((bits | bytes):num)] [= init-value]
+    #       Note: min max and init val can be a MVL literal as well as an enum or string, we should define a variable for legal "values"
+    - match: (?:{{struct_access}}\s+)?(static\s+)?(const\s+)?(!\s*)?(%\s*)?(?:{{valid_name}}\s*)(?:(\:)\s*{{valid_type}}\s*)?(;)
+      captures:
+        1: storage.modifier.access.specman
+        2: storage.modifier.static.specman
+        3: storage.modifier.const.specman
+        4: punctuation.definition.variable.ungenerated.specman
+        5: punctuation.definition.variable.physical.specman
+        6: variable.other.specman
+        7: punctuation.separator.type.specman
+        8: storage.type.specman
+        9: punctuation.terminator.specman
+    - match: (\})\s*(;)
+      pop: true
+      captures:
+        1: punctuation.section.class.end.specman
+        2: punctuation.terminator.specman
+
+  constraint-def:
+    # TODO: Complete definition of constraints based on chapter 11.1
+    - meta_scope: meta.constraint.specman
+    - include: comments
+    - include: literals
+    # TODO: Allow for literals/function calls after == >=
+    # TODO: Support select
+    - match: (keep\s+)(soft\s+)?(?:{{valid_name}}\s*)(in|==|!=|>=|<=|>|<)?(.*)?(;)
+      captures:
+        1: keyword.other.constraint.specman
+        2: keyword.modifier.constraint.specman
+        3: variable.other.specman
+        4: keyword.operator.logical.specman
+        6: punctuation.terminator.specman
+      pop: true
+    - match: (keep\s+)(soft\s+)?(for\s+each\s+in\s+)(?:{{valid_name}}\s*)(\{)
+      captures:
+        1: keyword.other.constraint.specman
+        2: keyword.modifier.constraint.specman
+        3: keyword.keyword.control.specman
+        4: variable.other.specman
+        5: punctuation.section.constraint_loop.begin.specman
+      push: constraint-body
+    - match: (\};)
+      captures:
+        1: punctuation.section.constraint_loop.end.specman
+      pop: true
+    - include: tbd
+
+  constraint-body:
+    - include: comments
+    - include: code-blocks
+    - match: (?=\})
+      pop: true
+    - include: literals
+    - include: tbd
+
+  inline-generation:
+    - match: \s+(gen)\s+(\w+)
+      captures:
+        1: keyword.other.gen.specman
+        2: variable.other.member.specman
+      push: inline-generation-constraint
+
+  inline-generation-constraint:
+    - meta_content_scope: meta.constraint.specman
+    - match: ;
+      pop: true
+    - match: \bkeeping\b
+      scope: keyword.other.constraint.specman
+    - match: \{
+      scope: punctuation.section.constraint.begin.specman
+      push: inline-constraints
+
+  inline-constraints:
+    - match: \}(?=;)
+      scope: punctuation.section.constraint.end.specman
+      pop: true
+
+  struct-allocation:
+    - match: (?=(a\s+)?\bnew\b)
+      push: struct-allocation-def
+
+  struct-allocation-def:
+    - meta_content_scope: meta.function-call.new.specman
+    - match: (a\s+)?\bnew\b
+      scope: variable.function.new.specman
+    - match: (with)\s*(\{)
+      captures:
+        1: keyword.operator.assignment.specman
+        2: punctuation.section.block.begin.specman
+      push:
+        - meta_content_scope: meta.block.action.specman
+        - include: code
+        - match: (?=(\})\s*(;))
+          pop: true
+    - match: (\})\s*(;)
+      pop: true
+      captures:
+        1: punctuation.section.block.end.specman
+        2: punctuation.terminator.specman
+    - match: (?:{{valid_type}})\s*(\(\s*{{valid_name}}\s*\))?
+      captures:
+        1: storage.type.specman
+        2: variable.other.specman
+    - match: ;
+      scope: punctuation.terminator.specman
+      pop: true
+
+  built-in-function-calls:
+    - match: ({{built_in_functions}})\s*(\()
+      captures:
+        1: variable.function.builtin.specman
+        2: punctuation.section.parens.begin.specman
+      push:
+        - meta_scope: meta.function-call.builtin.specman
+        - match: (\))\s*(;)?
+          pop: true
+          captures:
+            1: punctuation.section.parens.end.specman
+            2: punctuation.terminator.specman
+        - include: code
+
+  code-blocks:
+    - match: \{
+      scope: punctuation.section.block.begin.specman
+      push:
+      - meta_content_scope: meta.code_block.for_debug
+      - match: \}
+        scope: punctuation.section.block.end.specman
+        pop: true
+      - include: code
+
+  preprocessor:
+    - match: \s*(?:\}\s*)?(#\s*(?:ifdef|ifndef|else))\s*((?:`)?{{valid_name}})?\s*(\{)
+      captures:
+        1: keyword.control.import.specman
+        2: variable.other.define.specman
+        4: punctuation.section.block.begin.specman
+      push:
+      - meta_scope: meta.preprocessor.specman
+      - include: code
+      - include: struct-contents
+      - match: \}
+        scope: punctuation.section.block.end.specman
+        pop: true
+
+
+#######
+
+  tbd:
+    - scope: keyword.statement.specman
+      match: \b(var|instance|on|start|event|expect|check|that|routine|specman|like|all|radix|hex|dec|bin|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
+
+    - scope: variable.function.specman meta.function-call
+      match: \b(initialize|non_terminal|testgroup|delayed|exit|finish|out|print|outf|appendf|post_generate|pre_generate|setup_test|finalize_test|extract_test|init|run|copy|as_a|set_config|add|clear|lock|quit|lock|unlock|release|swap|quit|to_string|value|stop_run|crc_8|crc_32|crc_32_flip|get_config|add0|all_indices|and_all|apply|average|count|delete|exists|first_index|get_indices|has|insert|is_a_permutation|is_empty|key|key_exists|key_index|last|last_index|max|max_index|max_value|min|min_index|min_value|or_all|pop|pop0|push|push0|product|resize|reverse|sort|split|sum|top|top0|unique|clear|is_all_iterations|get_enclosing_unit|hdl_path|exec|deep_compare|deep_compare_physical|pack|unpack|fatal)\b
+
+    - scope: keyword.control.specman
+      match: \b(until|repeat|while|for|from|to|step|each|do|break|continue|before|next|sequence|always|-kind|network|index|it|me|in|return|result|select)\b
+
+    - scope: keyword.packing.specman
+      match: \b(packing|low|high)\b
+
+    - scope: keyword.conditional.specman
+      match: \b(choose|matches|if|then|(?<!#\s)else|when|try)\b
+
+    - scope: keyword.conditional.specman
+      match: \b(case|casex|casez|default)\b
+
+    - scope: keyword.operator.word.specman
+      match: \b(and|or|not|xor)\b
+
+    - scope: keyword.operator.assignment.specman
+      match: (=|+=|-=|*=)
+
+    - scope: keyword.operator.logical.specman
+      match: (==|!=|>|<|===|!===|>=|<=)
+
+    - scope: keyword.operator.arithmetic.specman
+      match: (-|\+|*|/)
+
+    - scope: keyword.operator.bitwise.specman
+      match: (&|\|~|!)
+
+    - scope: keyword.temporal.specman
+      match: \b(cycle|sample|events|forever|wait|change|negedge|rise|fall|delay|sync|sim|true|detach|eventually|emit)\b
+
+    - scope: keyword.define.specman
+      match: \b(as|computed|type|verilog|vhdl|variable|global|sys)\b
+
+    - scope: keyword.control.import.specman
+      match: \b(import)\b
+
+    - scope: keyword.constraint.specman
+      match: \b(soft|before)\b
+
+    - scope: keyword.special.specman
+      match: \b(untyped|symtab|ECHO|DOECHO)\b
+
+    - scope: keyword.file.specman
+      match: \b(files|load|module|ntv|source_ref|script|read|write)\b
+
+    - scope: keyword.fsm.specman
+      match: \b(initial|idle|others|posedge|clock|cycles)\b
+
+    - scope: storage.type.specman
+      match: \b{{types}}\b
