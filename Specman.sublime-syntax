@@ -10,12 +10,9 @@ scope: text.specman
 contexts:
   main:
     # 1.1.2 Code segments
-    # Note: by default, a .e file is comment until a code-segment is started. To reflect this,
-    # I splitted the syntax definition into two files
+    # Note: by default, a .e file is comment until a code-segment is started.
+    # To reflect this, I splitted the syntax definition into two files
     - match: ^(<')
-      push: SpecmanCode.sublime-syntax
-      with_prototype:
-      - match: ^('>)
-        pop: true
-        #scope: punctuation.section.source.end.specman
-        #set: comment-block
+      embed: SpecmanCode.sublime-syntax
+      escape: ^('>)
+
