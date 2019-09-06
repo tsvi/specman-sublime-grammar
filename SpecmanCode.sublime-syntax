@@ -10,12 +10,13 @@ variables:
   types: (list of \w*|locker|address|body|code|vec|chars|integer|real|bool|int|long|uint|byte|bit|time|string|byte_array|external_pointer)
   scalar_types: int|uint|longint|longuint|bit|nibble|byte|time|bool
   # The following should include all keywords which are invalid as a user defined name
-  built_in_functions: assert|error|compute|message|append|dut_error|warning
+  built_in_functions: assert|error|compute|messagef|message|appendf|append|dut_error|warning
   built_in_functions_optional_parens: assert|compute|read_only
-  invalid_names: if|{{built_in_functions}}
+  invalid_names: keep|if|{{built_in_functions}}
   valid_name: ([a-zA-Z](?:[a-zA-Z0-9_.]+)?(?<!{{invalid_names}}))
   valid_type: ((?:list\s+of\s+)?[a-zA-Z](?:[a-zA-Z0-9_]+)?(?:\s*\(\s*bits\s*:\s*\d+\s*\))?)
   struct_access: package|protected|private
+  concurrency_actions: first\s+of|all\s+of
 
 contexts:
   main:
@@ -44,6 +45,7 @@ contexts:
     - include: inline-generation
     - include: struct-allocation
     - include: tbd
+    - include: concurrency-blocks
     - include: code-blocks
 
   # 1.1.3 Comments and White space
@@ -160,14 +162,17 @@ contexts:
         4: storage.modifier.specman
 
   # 7.1 Defining and Extending Methods
+  # TODO: struct_access does not match, e.g final sync_enable_regs(trans : fme_iris_env_cfg_trans)@sys.any is
+  # see fme_iris_mgp_tlm_scbd.e lines 82ff
   methods:
-    - match: (?=^\s*(?:{{struct_access}}|static|final)?\s+[a-zA-Z](?:[a-zA-Z0-9_]+)?\s*\()
+    # - match: (?=^\s*(?:{{struct_access}}|static|final)?\s+[a-zA-Z](?:[a-zA-Z0-9_]+)?\s*\()
+    - match: (?=^\s*(?:{{struct_access}}|static|final)?\s+{{valid_name}}\s*\()
       push: method-declaration
 
   method-declaration:
     - match: (?!\s+is\s+)
       pop: true
-    - match: ({{struct_access}}|static|final)?\s+{{valid_name}}\s*(\()
+    - match: \s*({{struct_access}}|static|final)?\s+{{valid_name}}\s*(\()
       captures:
         1: storage.modifier.function.specman
         2: meta.method.identifier.specman entity.name.function.specman
@@ -184,6 +189,11 @@ contexts:
         4: storage.type.specman
     - match: (,)
       scope: punctuation.separator.parameter.specman
+    - match: \)\s*(;)
+      scope: punctuation.section.parens.end.specman
+      captures:
+        1: punctuation.terminator.specman
+      pop: true
     - match: \)
       scope: punctuation.section.parens.end.specman
       set: method-declaration-end
@@ -226,6 +236,14 @@ contexts:
          1: punctuation.section.method.end.specman
          2: punctuation.terminator.specman
        pop: true
+
+  # 15.1 Synchronization Actions
+  concurrency-blocks:
+    - match: ({{concurrency_actions}})\s+\{
+      captures:
+        1: keyword.control.specman
+      scope: punctuation.section.block.begin.specman
+      push: method-contents
 
   # 1.1.5.2 Macros
   macros:
@@ -295,15 +313,17 @@ contexts:
         1: punctuation.section.class.end.specman
         2: punctuation.terminator.specman
 
+  # 11.1 Defining constraints
   constraint-def:
     # TODO: Complete definition of constraints based on chapter 11.1
     - meta_scope: meta.constraint.specman
     - include: comments
     - include: literals
-    # TODO: read_only(expression) in constraint and before =>
     # TODO: Allow for literals/function calls after == >=
     # TODO: Support select and type constraints
     # TODO: add name for constraint
+
+    # reset_soft()
     - match: (\bkeep\b)\s+(?:{{valid_name}})\.(reset_soft)
       captures:
         1: keyword.other.constraint.specman
@@ -321,18 +341,27 @@ contexts:
         5: punctuation.section.constraint_block.begin.specman
       push: constraint-body
 
-    # keep <block>
-    - match: (keep\s+)(soft\s+)?(.*?)(\s+\=\>\s+all\s+of)?(\s*\{)
+    # keep <block> in all its forms, but need '{' in same line to detect it
+    - match: (keep\s+)(soft\s+)?(.*?)(\s+\=\>\s+)?(all\s+of)?(\s*\{)
       captures:
         1: keyword.other.constraint.specman
         2: keyword.modifier.constraint.specman
         3: variable.other.specman
-        4: keyword.control.specman
-        5: punctuation.section.constraint_block.begin.specman
+        4: keyword.opertator.logical.specman
+        5: keyword.control.specman
+        6: punctuation.section.constraint_block.begin.specman
       push: constraint-body
 
+    # implication
+    - match: (keep\s+)(soft\s+)?(.*?)(=>)
+      captures:
+        1: keyword.other.constraint.specman
+        2: keyword.modifier.constraint.specman
+        3: variable.other.specman
+        4: keyword.operator.logical.specman
+
     # one-line constraint exppression
-    - match: (keep\s+)(soft\s+)?(?:{{valid_name}}\s*)(in|\=\>||==|!=|>=|<=|>|<)?(.*)?(;)
+    - match: (keep\s+)(soft\s+)?(?:{{valid_name}}\s*)(in|==|!=|>=|<=|>|<)?(.*)?(;)
       captures:
         1: keyword.other.constraint.specman
         2: keyword.modifier.constraint.specman
@@ -340,6 +369,7 @@ contexts:
         4: keyword.operator.logical.specman
         6: punctuation.terminator.specman
       pop: true
+
 
     - match: (\};)
       captures:
@@ -411,11 +441,11 @@ contexts:
   built-in-function-calls:
     - match: ({{built_in_functions}})\s*(\()
       captures:
-        1: variable.function.builtin.specman
+        1: keyword.function.builtin.specman
         2: punctuation.section.parens.begin.specman
       push:
         - meta_scope: meta.function-call.builtin.specman
-        - match: (\))\s*(;)?
+        - match: (\))\s*(;)
           pop: true
           captures:
             1: punctuation.section.parens.end.specman
@@ -423,10 +453,10 @@ contexts:
         - include: code
     - match: ({{built_in_functions_optional_parens}}\s+)
       captures:
-        1: variable.function.builtin.specman
+        1: keyword.function.builtin.specman
       push:
         - meta_scope: meta.function-call.builtin.specman
-        - match: \s*(;)?
+        - match: \s*(;)
           pop: true
           captures:
             1: punctuation.terminator.specman
@@ -434,6 +464,8 @@ contexts:
 
   code-blocks:
     - match: \{
+      captures:
+        1: keyword.control.specman
       scope: punctuation.section.block.begin.specman
       push:
       - meta_content_scope: meta.code_block.for_debug
