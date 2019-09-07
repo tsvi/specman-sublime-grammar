@@ -22,7 +22,7 @@ contexts:
   main:
     - match: \b(package)\s+(.*)(;)
       captures:
-        1: keyword.top-level.specman
+        1: entity.name.namespace.specman
         2: entity.name.specman
         3: punctuation.terminator.specman
     - match: \b(import)\s+(.*)(;)
@@ -40,12 +40,12 @@ contexts:
     - include: macros
     - include: literals
     - include: built-in-function-calls
-    - include: scalar-type-definitions
+    - include: scalar-type-definition
     - include: methods
     - include: inline-generation
     - include: struct-allocation
     - include: tbd
-    - include: concurrency-blocks
+    - include: concurrency-block
     - include: code-blocks
 
   # 1.1.3 Comments and White space
@@ -152,14 +152,37 @@ contexts:
       scope: constant.character.literal.specman
 
   # 2.7 Defining and extending scalar types
-  scalar-type-definitions:
-    - match: '\b(type|extend)\b\s+({{valid_name}})\s*:\s*({{scalar_types}}\s*(\(bits:.*\))?)?'
+  scalar-type-definition:
+    # - match: '\b(type|extend)\b\s+{{valid_name}}\s*:\s*({{scalar_types}}\s*)(\(bits:.*\))?'
+    - match: '\b(type|extend)\b\s+{{valid_name}}\s*:\s*{{valid_type}}'
       scope: storage.type.specman
       captures:
-        1: keyword.specman
+        1: keyword.declaration.specman
         2: storage.type.specman
         3: storage.type.specman
-        4: storage.modifier.specman
+        # : storage.modifier.specman
+    # start of (multi-line) enum declaration
+    - match: '\b(type|extend)\b\s+{{valid_name}}\s*:\s*(\[\s*)'
+      captures:
+        1: keyword.declaration.specman
+        2: storage.type.enum.specman
+        3: punctuation.brackets.begin.specman
+      push: enum-value-declarations
+
+  enum-value-declarations:
+    - meta_content_scope: meta.enum.specman
+    - match: (\s*,)?(?:\s*{{valid_name}}\s*)(?:(=\s*)([^,]*)(\s*,)?)?
+      captures:
+        1: punctuation.separator.specman
+        2: storage.type.enum.specman
+        3: keyword.operator.assignment
+        4: constant
+        5: punctuation.separator.specman
+    - match: \]\s*(;)
+      scope: punctuation.brackets.end.specman
+      captures:
+        1: punctuation.terminator.specman
+      pop: true
 
   # 7.1 Defining and Extending Methods
   # TODO: struct_access does not match, e.g final sync_enable_regs(trans : fme_iris_env_cfg_trans)@sys.any is
@@ -230,6 +253,7 @@ contexts:
      - include: struct-allocation
      - include: built-in-function-calls
      - include: code-blocks
+     - include: variable-declaration
      - include: tbd
      - match: (\})\s*(;)
        captures:
@@ -237,8 +261,15 @@ contexts:
          2: punctuation.terminator.specman
        pop: true
 
+  # 8.2 var
+  variable-declaration: BAUSTELLE
+    - match: (var\s*)(?:{{valid_name}})
+      captures:
+        1: keyword.declaration.specman
+        2: variable.other
+
   # 15.1 Synchronization Actions
-  concurrency-blocks:
+  concurrency-block:
     - match: ({{concurrency_actions}})\s+\{
       captures:
         1: keyword.control.specman
@@ -492,7 +523,7 @@ contexts:
 
   tbd:
     - scope: keyword.statement.specman
-      match: \b(var|instance|on|event|expect|check|that|routine|specman|like|all|radix|hex|dec|bin|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
+      match: \b(instance|on|event|expect|check|that|routine|specman|like|all|radix|hex|dec|bin|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
 
     - scope: variable.function.specman meta.function-call
       match: \b(initialize|non_terminal|testgroup|delayed|exit|finish|out|print|outf|appendf|post_generate|pre_generate|setup_test|finalize_test|extract_test|init|run|copy|as_a|set_config|add|clear|lock|quit|lock|unlock|release|swap|quit|to_string|value|stop_run|crc_8|crc_32|crc_32_flip|get_config|add0|all_indices|and_all|apply|average|count|delete|exists|first_index|get_indices|has|insert|is_a_permutation|is_empty|key|key_exists|key_index|last|last_index|max|max_index|max_value|min|min_index|min_value|or_all|pop|pop0|push|push0|product|resize|reverse|sort|split|sum|top|top0|unique|clear|is_all_iterations|get_enclosing_unit|hdl_path|exec|deep_compare|deep_compare_physical|pack|unpack|fatal)\b
@@ -513,7 +544,7 @@ contexts:
       match: \b(and|or|not|xor)\b
 
     - scope: keyword.operator.assignment.specman
-      match: (=|+=|-=|*=)
+      match: '(=|+=|-=|*=|:=)'
 
     - scope: keyword.operator.logical.specman
       match: (==|!=|>|<|===|!===|>=|<=)
