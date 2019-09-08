@@ -371,9 +371,8 @@ contexts:
   # for block-constraints
   constraint-def:
     - meta_scope: meta.constraint.specman
-    # TODO: Complete definition of constraints based on chapter 11.1
-
     - include: literals
+
     # TODO: Support select and type constraints
     # TODO: add name for constraint
     # TODO: make single match pattern for { to push constraint-block; include constraint-def in constraint-body
@@ -405,6 +404,7 @@ contexts:
       push: constraint-block
 
     # implication without block (matched above)
+    # TODO: make anon push and pop with ;
     - match: (\bsoft\b)?\s*(.*?)(=>)
       captures:
         1: keyword.modifier.constraint.specman
@@ -414,6 +414,7 @@ contexts:
 
     # before
     - match: (\bsoft\b)?\s*(?:{{valid_name}}\s*)(\bbefore\b)\s*(.*)(;)
+    # TODO: make anon push and pop with ;
       captures:
         1: keyword.modifier.constraint.specman
         2: variable.other.specman
@@ -424,6 +425,7 @@ contexts:
 
     # one-line constraint expression
     - match: (\bsoft\b)?(?:\s*{{valid_name}}\s*)(in|==|!=|>=|<=|>|<)?
+    # TODO: make anon push and pop with ;
       captures:
         1: keyword.modifier.constraint.specman
         2: variable.other.specman
@@ -436,6 +438,7 @@ contexts:
     - meta_scope: meta.block.constraint.specman
     - include: built-in-function-calls
     - include: built-in-variables
+    - include: constraint-def
 
     - match: \}\s*(;)
       scope: punctuation.section.constraint_block.end.specman
