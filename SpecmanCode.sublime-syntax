@@ -10,11 +10,14 @@ variables:
   types: (list of \w*|locker|address|body|code|vec|chars|integer|real|bool|int|long|uint|byte|bit|time|string|byte_array|external_pointer)
   scalar_types: int|uint|longint|longuint|bit|nibble|byte|time|bool
   # The following should include all keywords which are invalid as a user defined name
-  built_in_functions: assert|error|compute|messagef|message|appendf|append|dut_error|warning
-  built_in_functions_optional_parens: assert|compute|read_only
-  invalid_names: keep|if|{{built_in_functions}}
+  built_in_functions: assert|error|compute|messagef|message|appendf|append|dut_error|read_only|value|warning
+  built_in_functions_optional_parens: assert|compute
+  built_in_variables: \bit\b|\bme\b
+  invalid_names: keep|if|{{built_in_functions}}|{{built_in_variables}}
+  scalar_range_modifier: \[\s*\d+\s*\.\.\s*\d+\s*\]
+  scalar_width_modifier: \(\s*(?:bits|bytes)\s*:\s*\d+\s*\)
   valid_name: ([a-zA-Z](?:[a-zA-Z0-9_.]+)?(?<!{{invalid_names}}))
-  valid_type: ((?:list\s+of\s+)?[a-zA-Z](?:[a-zA-Z0-9_]+)?(?:\s*\(\s*bits\s*:\s*\d+\s*\))?)
+  valid_type: ((?:list\s+of\s+)?[a-zA-Z](?:[a-zA-Z0-9_]+)?(?:{{scalar_width_modifier})?)
   struct_access: package|protected|private
   concurrency_actions: first\s+of|all\s+of
 
@@ -33,8 +36,10 @@ contexts:
 
     - include: code
 
-  code:
+  prototype:
     - include: comments
+
+  code:
     - include: preprocessor
     - include: structs
     - include: macros
@@ -61,6 +66,7 @@ contexts:
 
   string:
     - meta_scope: string.quoted.double.specman
+    - meta_include_prototype: false
     - match: \\n|\\t|\\f|\\"|\\\\|\\r
       scope: constant.character.escape.specman
     - match: '"'
@@ -153,32 +159,34 @@ contexts:
 
   # 2.7 Defining and extending scalar types
   scalar-type-definition:
-    # - match: '\b(type|extend)\b\s+{{valid_name}}\s*:\s*({{scalar_types}}\s*)(\(bits:.*\))?'
-    - match: '\b(type|extend)\b\s+{{valid_name}}\s*:\s*{{valid_type}}'
+    - match: '\b(type|extend)\b\s+{{valid_name}}\s*:\s*{{valid_type}}(\s*;)?'
       scope: storage.type.specman
       captures:
         1: keyword.declaration.specman
         2: storage.type.specman
         3: storage.type.specman
-        # : storage.modifier.specman
+        4: punctuation.terminator.specman
     # start of (multi-line) enum declaration
     - match: '\b(type|extend)\b\s+{{valid_name}}\s*:\s*(\[\s*)'
       captures:
         1: keyword.declaration.specman
         2: storage.type.enum.specman
         3: punctuation.brackets.begin.specman
-      push: enum-value-declarations
+      push: enum-values-declaration
 
-  enum-value-declarations:
+  enum-values-declaration:
     - meta_content_scope: meta.enum.specman
-    - match: (\s*,)?(?:\s*{{valid_name}}\s*)(?:(=\s*)([^,]*)(\s*,)?)?
+    - include: literals
+    - match: (\s*,)
+      captures:
+        1: punctuation.separator.specman
+    - match: (\s*,)?(?:\s*{{valid_name}}\s*)(=\s*)?
       captures:
         1: punctuation.separator.specman
         2: storage.type.enum.specman
         3: keyword.operator.assignment
-        4: constant
-        5: punctuation.separator.specman
-    - match: \]\s*(;)
+    # - match: '(\]\s*)({{scalar_width_modifier}})(\s*;)'
+    - match: \](\s*;)?
       scope: punctuation.brackets.end.specman
       captures:
         1: punctuation.terminator.specman
@@ -246,7 +254,6 @@ contexts:
 
   method-contents:
      - meta_content_scope: meta.method.body.specman
-     - include: comments
      - include: macros
      - include: literals
      - include: inline-generation
@@ -262,11 +269,24 @@ contexts:
        pop: true
 
   # 8.2 var
-  variable-declaration: BAUSTELLE
-    - match: (var\s*)(?:{{valid_name}})
+  variable-declaration:
+    - match: '(\bvar\b)\s*(?:{{valid_name}}\s*):\s*{{valid_type}}'
       captures:
         1: keyword.declaration.specman
         2: variable.other
+        3: storage.type.specman
+    - match: '(\bvar\b)\s*(?:{{valid_name}}\s*):\s*\s*(\[\s*)'
+      captures:
+        1: keyword.declaration.specman
+        2: variable.other
+        3: punctuation.brackets.begin.specman
+      push: enum-values-declaration
+    # implicitly typed variable
+    - match: '(\bvar\b)\s*(?:{{valid_name}}\s*)(:=\s*)'
+      captures:
+        1: keyword.declaration.specman
+        2: variable.other
+        3: keyword.operator.assignment
 
   # 15.1 Synchronization Actions
   concurrency-block:
@@ -294,7 +314,7 @@ contexts:
   struct-declaration:
     - match: (struct|unit)\s+{{valid_name}}(?:\s+(like)\s+{{valid_name}})?\s*(\{)
       captures:
-        1: storage.type.struct.specman
+        1: keyword.declaration.class.specman
         2: meta.class.identifier.specman entity.name.class.specman
         3: keyword.declaration.like.specman
         4: entity.other.inherited-class.specman
@@ -302,15 +322,13 @@ contexts:
       push: struct-contents
     - match: (extend)\s+{{valid_name}}\s*(\{)
       captures:
-        # 1: storage.type.struct.extend.specman
-        1: keyword
+        1: keyword.declaration.class.specman
         2: meta.class.identifier.specman entity.name.class.specman
         3: punctuation.section.class.begin.specman
       set: struct-contents
     - match: (extend)\s+(?:{{valid_name}}\s+)+(?={{valid_name}}\s*\{)
       captures:
-        # 1: storage.type.struct.extend.specman
-        1: keyword
+        1: keyword.declaration.class.specman
         2: meta.class.identifier.specman entity.name.class.specman
       set:
         - match: (?:{{valid_name}}\s*)
@@ -321,10 +339,13 @@ contexts:
 
   struct-contents:
     - meta_content_scope: meta.class.body.specman
-    - include: comments
     - include: code
-    - match: (?=keep)
+    - match: (\bkeep\b)\s*
+      captures:
+        1: keyword.other.constraint.specman
       push: constraint-def
+
+    # 3.5 Defining Fields
     # TODO: Need to complete with  [[min-val .. max-val]]  [((bits | bytes):num)] [= init-value]
     #       Note: min max and init val can be a MVL literal as well as an enum or string, we should define a variable for legal "values"
     - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?(!\s*)?(%\s*)?(?:{{valid_name}}\s*)(?:(\:)\s*{{valid_type}}\s*)?(;)
@@ -338,6 +359,7 @@ contexts:
         7: punctuation.separator.type.specman
         8: storage.type.specman
         9: punctuation.terminator.specman
+
     - match: (\})\s*(;)
       pop: true
       captures:
@@ -345,75 +367,85 @@ contexts:
         2: punctuation.terminator.specman
 
   # 11.1 Defining constraints
+  # In this scope, the keep statement has already been consumed; this way we can use the match patterns also
+  # for block-constraints
   constraint-def:
-    # TODO: Complete definition of constraints based on chapter 11.1
     - meta_scope: meta.constraint.specman
-    - include: comments
+    # TODO: Complete definition of constraints based on chapter 11.1
+
     - include: literals
-    # TODO: Allow for literals/function calls after == >=
     # TODO: Support select and type constraints
     # TODO: add name for constraint
 
     # reset_soft()
-    - match: (\bkeep\b)\s+(?:{{valid_name}})\.(reset_soft)
+    - match: (?:\s*{{valid_name}})\.(reset_soft)
       captures:
-        1: keyword.other.constraint.specman
-        2: variable.specman
-        3: keyword.modifier.constraint.specman
+        1: variable.other.specman
+        2: keyword.modifier.constraint.specman
       pop: true
 
-    # keep for each
-    - match: (keep\s+)(soft\s+)?(for\s+each\s+in\s+)(?:{{valid_name}}\s*)(\{)
+    # TODO: extend regexp for full syntax
+    # for each [(item-name)] [using [index (index-name)] [prev (prev-name)]] in gen-list {constraint-def | nested-for-each; ...}
+    - match: (\bsoft\b)?\s*(for\s+each\s+in\s+)\(\s*(?:{{valid_name}}\s*\))(\s*\{)
       captures:
-        1: keyword.other.constraint.specman
-        2: keyword.modifier.constraint.specman
-        3: keyword.control.specman
-        4: variable.other.specman
-        5: punctuation.section.constraint_block.begin.specman
+        1: keyword.modifier.constraint.specman
+        2: keyword.control.specman
+        3: variable.other.specman
+        4: punctuation.section.constraint_block.begin.specman
       push: constraint-body
 
     # keep <block> in all its forms, but need '{' in same line to detect it
-    - match: (keep\s+)(soft\s+)?(.*?)(\s+\=\>\s+)?(all\s+of)?(\s*\{)
+    - match: (\bsoft\b)?\s*(.*?)(\s+\=\>\s+)?(all\s+of)?(\s*\{)
       captures:
-        1: keyword.other.constraint.specman
-        2: keyword.modifier.constraint.specman
-        3: variable.other.specman
-        4: keyword.opertator.logical.specman
-        5: keyword.control.specman
-        6: punctuation.section.constraint_block.begin.specman
+        1: keyword.modifier.constraint.specman
+        2: variable.other.specman
+        3: keyword.operator.logical.specman
+        4: keyword.control.specman
+        5: punctuation.section.constraint_block.begin.specman
       push: constraint-body
 
-    # implication
-    - match: (keep\s+)(soft\s+)?(.*?)(=>)
+    # implication without block (matched above)
+    - match: (\bsoft\b)?\s*(.*?)(=>)
       captures:
-        1: keyword.other.constraint.specman
-        2: keyword.modifier.constraint.specman
-        3: variable.other.specman
-        4: keyword.operator.logical.specman
-
-    # one-line constraint exppression
-    - match: (keep\s+)(soft\s+)?(?:{{valid_name}}\s*)(in|==|!=|>=|<=|>|<)?(.*)?(;)
-      captures:
-        1: keyword.other.constraint.specman
-        2: keyword.modifier.constraint.specman
-        3: variable.other.specman
-        4: keyword.operator.logical.specman
-        6: punctuation.terminator.specman
+        1: keyword.modifier.constraint.specman
+        2: variable.other.specman
+        3: keyword.operator.logical.specman
       pop: true
 
-
-    - match: (\};)
+    # before
+    - match: (\bsoft\b)?\s*(?:{{valid_name}}\s*)(\bbefore\b)\s*(.*)(;)
       captures:
-        1: punctuation.section.constraint_block.end.specman
+        1: keyword.modifier.constraint.specman
+        2: variable.other.specman
+        3: keyword.other.constraint.specman
+        4: variable.other.specman
+        5: punctuation.terminator.specman
       pop: true
-    - include: tbd
+
+    # one-line constraint expression
+    - match: (\bsoft\b)?(?:\s*{{valid_name}}\s*)(in|==|!=|>=|<=|>|<)?
+      captures:
+        1: keyword.modifier.constraint.specman
+        2: variable.other.specman
+        3: keyword.operator.logical.specman
+        # 4: variable.other.specman
+        # 5: punctuation.terminator.specman
+      pop: true
 
   constraint-body:
-    - include: comments
+    - meta_scope: meta.block.constraint.specman
     - include: code-blocks
-    # - include: built-in-function-calls
-    - match: (?=\})
+    - include: built-in-function-calls
+    - match: ({{built_in_variables}})
+      captures:
+        1: variable.language.specman
+
+    - match: \}\s*(;)
+      scope: punctuation.section.constraint_block.end.specman
+      captures:
+        1: punctuation.terminator.specman
       pop: true
+
     - include: literals
     - include: tbd
 
@@ -544,16 +576,16 @@ contexts:
       match: \b(and|or|not|xor)\b
 
     - scope: keyword.operator.assignment.specman
-      match: '(=|+=|-=|*=|:=)'
+      match: '(=|\+=|-=|\*=|:=)'
 
     - scope: keyword.operator.logical.specman
       match: (==|!=|>|<|===|!===|>=|<=)
 
     - scope: keyword.operator.arithmetic.specman
-      match: (-|\+|*|/)
+      match: (-|\+|\*|/)
 
     - scope: keyword.operator.bitwise.specman
-      match: (&|\|~|!)
+      match: (&|\|~|!|\^)
 
     - scope: keyword.temporal.specman
       match: \b(cycle|sample|events|forever|wait|change|negedge|rise|fall|delay|sync|sim|true|detach|eventually|emit)\b
@@ -578,4 +610,7 @@ contexts:
 
     - scope: storage.type.specman
       match: \b{{types}}\b
+
+    - scope: punctuation.terminator.specman
+      match: \s*;
 # end
