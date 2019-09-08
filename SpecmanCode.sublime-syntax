@@ -434,7 +434,6 @@ contexts:
 
   constraint-block:
     - meta_scope: meta.block.constraint.specman
-    - include: code-blocks
     - include: built-in-function-calls
     - include: built-in-variables
 
