@@ -376,7 +376,7 @@ contexts:
     - include: literals
     # TODO: Support select and type constraints
     # TODO: add name for constraint
-
+    # TODO: make single match pattern for { to push constraint-block; include constraint-def in constraint-body
     # reset_soft()
     - match: (?:\s*{{valid_name}})\.(reset_soft)
       captures:
@@ -392,7 +392,7 @@ contexts:
         2: keyword.control.specman
         3: variable.other.specman
         4: punctuation.section.constraint_block.begin.specman
-      push: constraint-body
+      push: constraint-block
 
     # keep <block> in all its forms, but need '{' in same line to detect it
     - match: (\bsoft\b)?\s*(.*?)(\s+\=\>\s+)?(all\s+of)?(\s*\{)
@@ -402,7 +402,7 @@ contexts:
         3: keyword.operator.logical.specman
         4: keyword.control.specman
         5: punctuation.section.constraint_block.begin.specman
-      push: constraint-body
+      push: constraint-block
 
     # implication without block (matched above)
     - match: (\bsoft\b)?\s*(.*?)(=>)
@@ -432,13 +432,11 @@ contexts:
         # 5: punctuation.terminator.specman
       pop: true
 
-  constraint-body:
+  constraint-block:
     - meta_scope: meta.block.constraint.specman
     - include: code-blocks
     - include: built-in-function-calls
-    - match: ({{built_in_variables}})
-      captures:
-        1: variable.language.specman
+    - include: built-in-variables
 
     - match: \}\s*(;)
       scope: punctuation.section.constraint_block.end.specman
@@ -524,6 +522,11 @@ contexts:
           captures:
             1: punctuation.terminator.specman
         - include: code
+
+  built-in-variables:
+    - match: ({{built_in_variables}})
+      captures:
+        1: variable.language.specman
 
   code-blocks:
     - match: \{
