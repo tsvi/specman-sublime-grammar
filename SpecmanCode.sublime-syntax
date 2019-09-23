@@ -7,15 +7,17 @@ scope: source.specman
 hidden: true
 
 variables:
-  types: (list of \w*|locker|address|body|code|vec|chars|integer|real|bool|int|long|uint|byte|bit|time|string|byte_array|external_pointer)
   scalar_types: int|uint|longint|longuint|bit|nibble|byte|time|bool
+  types: ({{scalar_types}}|string|real|set|untyped|rdv_semaphore|semaphore|locker|external_pointer)
   # The following should include all keywords which are invalid as a user defined name
-  built_in_functions: assert|error|compute|messagef|message|appendf|append|dut_error|read_only|value|warning
+  built_in_functions: assert|error|compute|fatal|messagef|message|appendf|append|dut_error|read_only|value|warning
   built_in_functions_optional_parens: assert|compute
-  built_in_variables: \bit\b|\bme\b
+  list_pseudo_methods: add|add0|clear|delete|fast_delete|insert|pop0|pop|push0|push|resize|all_different|apply|copy|count|exists|first|first_index|flatten|get_indices|has|is_a_permutation|is_empty|last|last_index|max|max_index|max_value|min|min_index|min_value|reverse|size|sort|sort_by_field|split|top0|top|unique|all|all_indices|and_all|or_all|average|product|sum|crc_8|crc_32|crc_32_flip|key|key_index|key_exists
+  built_in_variables: it|me
+  built_in_constants: TRUE|FALSE|NULL|UNDEF|MAX_INT|MIN_INT|MAX_LONGINT|MIN_LONGINT|MAX_UINT|MAX_LONGUINT
   invalid_names: keep|if|{{built_in_functions}}|{{built_in_variables}}
-  scalar_range_modifier: \[\s*\d+\s*\.\.\s*\d+\s*\]
-  scalar_width_modifier: \(\s*(?:bits|bytes)\s*:\s*\d+\s*\)
+  scalar_range_modifier: \[\s*[a-zA-Z0-9_]+\s*\.\.\s*[a-zA-Z0-9_]+\s*\]
+  scalar_width_modifier: \(\s*(?:bits|bytes)\s*:\s*[\d\*]+\s*\)
   valid_name: ([a-zA-Z](?:[a-zA-Z0-9_.]+)?(?<!{{invalid_names}}))
   valid_type: ((?:list\s+of\s+)?[a-zA-Z](?:[a-zA-Z0-9_]+)?(?:{{scalar_width_modifier})?)
   struct_access: package|protected|private
@@ -44,6 +46,7 @@ contexts:
     - include: structs
     - include: macros
     - include: literals
+    - include: operators
     - include: built-in-function-calls
     - include: scalar-type-definition
     - include: methods
@@ -73,8 +76,8 @@ contexts:
       scope: punctuation.definition.string.end.specman
       pop: true
 
-  # 1.1.4.3 MVL literals
   literals:
+    # 1.1.4.3 MVL literals
     - match: \b((\d+)(')([oO])[0-7]([0-7xXzZuUlLhHwWnN_]+)?)\b
       captures:
         1: constant.numeric.mvl.octal.specman
@@ -145,7 +148,7 @@ contexts:
         4: storage.modifier.constant.type.specman
 
     # 1.1.4.4 Predefined constants
-    - match: \b(TRUE|FALSE|NULL|UNDEF|MAX_INT|MIN_INT|MAX_LONGINT|MIN_LONGINT|MAX_UINT|MAX_LONGUINT)\b
+    - match: \b({{built_in_constants}})\b
       scope: constant.language.specman
 
     # 1.1.4.5 Literal string
@@ -156,6 +159,25 @@ contexts:
     # 1.1.4.6 Literal character
     - match: 0c"[a-zA-Z]"
       scope: constant.character.literal.specman
+
+  operators:
+
+    - scope: keyword.operator.word.specman
+      match: \b(and|or|not|xor)\b
+
+      # Note: we exclude the delayed assignment operator here because it is already
+      # in the logical operator match
+    - scope: keyword.operator.assignment.specman
+      match: '(=|\+=|-=|\*=|:=)'
+
+    - scope: keyword.operator.logical.specman
+      match: (==|!=|>|<|===|!===|>=|<=)
+
+    - scope: keyword.operator.arithmetic.specman
+      match: (-|\+|\*|/)
+
+    - scope: keyword.operator.bitwise.specman
+      match: (&|\|~|!|\^)
 
   # 2.7 Defining and extending scalar types
   scalar-type-definition:
@@ -185,11 +207,13 @@ contexts:
         1: punctuation.separator.specman
         2: storage.type.enum.specman
         3: keyword.operator.assignment
-    # - match: '(\]\s*)({{scalar_width_modifier}})(\s*;)'
-    - match: \](\s*;)?
-      scope: punctuation.brackets.end.specman
+    - match: '(\]\s*)({{scalar_width_modifier}})?(\s*;)?'
+    #- match: \](\s*;)?
+      #scope: punctuation.brackets.end.specman
       captures:
-        1: punctuation.terminator.specman
+        1: punctuation.brackets.end.specman
+        2: storage.modifier.specman
+        3: punctuation.terminator.specman
       pop: true
 
   # 7.1 Defining and Extending Methods
@@ -253,35 +277,39 @@ contexts:
       set: method-contents
 
   method-contents:
-     - meta_content_scope: meta.method.body.specman
-     - include: macros
-     - include: literals
-     - include: inline-generation
-     - include: struct-allocation
-     - include: built-in-function-calls
-     - include: code-blocks
-     - include: variable-declaration
-     - include: tbd
-     - match: (\})\s*(;)
-       captures:
-         1: punctuation.section.method.end.specman
-         2: punctuation.terminator.specman
-       pop: true
+    - meta_content_scope: meta.method.body.specman
+    # - include: macros
+    - include: literals
+    - include: operators
+    - include: inline-generation
+    - include: struct-allocation
+    - include: built-in-function-calls
+    - include: variable-declaration
+    - include: tbd
+    - include: concurrency-block
+    - include: code-blocks
+    - match: (\})\s*(;)
+      captures:
+        1: punctuation.section.method.end.specman
+        2: punctuation.terminator.specman
+      pop: true
 
   # 8.2 var
   variable-declaration:
-    - match: '(\bvar\b)\s*(?:{{valid_name}}\s*):\s*{{valid_type}}'
+    - match: '(\bvar\b)\s*(?:{{valid_name}}\s*):\s*{{valid_type}}\s*({{scalar_range_modifier}})?\s*({{scalar_width_modifier}})?'
       captures:
         1: keyword.declaration.specman
         2: variable.other
         3: storage.type.specman
+        4: storage.modifier.specman
+        5: storage.modifier.specman
     - match: '(\bvar\b)\s*(?:{{valid_name}}\s*):\s*\s*(\[\s*)'
       captures:
         1: keyword.declaration.specman
         2: variable.other
         3: punctuation.brackets.begin.specman
       push: enum-values-declaration
-    # implicitly typed variable
+    # Implicitly typed variable
     - match: '(\bvar\b)\s*(?:{{valid_name}}\s*)(:=\s*)'
       captures:
         1: keyword.declaration.specman
@@ -396,6 +424,7 @@ contexts:
       push: constraint-block
 
     # keep <block> in all its forms, but need '{' in same line to detect it
+    # TODO: matches also list constraint == {}
     - match: (\bsoft\b)?\s*(.*?)(\s+\=\>\s+)?(all\s+of)?(\s*\{)
       captures:
         1: keyword.modifier.constraint.specman
@@ -445,6 +474,7 @@ contexts:
     - meta_scope: meta.block.constraint.specman
     - include: built-in-function-calls
     - include: built-in-variables
+    # TODO: pop of simple constraints exit the block again
     - include: constraint-def
 
     - match: \}\s*(;)
@@ -531,9 +561,13 @@ contexts:
           captures:
             1: punctuation.terminator.specman
         - include: code
+    - match: (?:\s*{{valid_name}})\.({{list_pseudo_methods}})
+      captures:
+        1: variable.other.specman
+        2: keyword.function.builtin.specman
 
   built-in-variables:
-    - match: ({{built_in_variables}})
+    - match: \b({{built_in_variables}})\b
       captures:
         1: variable.language.specman
 
@@ -570,7 +604,7 @@ contexts:
       match: \b(instance|on|event|expect|check|that|routine|specman|like|all|radix|hex|dec|bin|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
 
     - scope: variable.function.specman meta.function-call
-      match: \b(initialize|non_terminal|testgroup|delayed|exit|finish|out|print|outf|appendf|post_generate|pre_generate|setup_test|finalize_test|extract_test|init|run|copy|as_a|set_config|add|clear|lock|quit|lock|unlock|release|swap|quit|to_string|value|stop_run|crc_8|crc_32|crc_32_flip|get_config|add0|all_indices|and_all|apply|average|count|delete|exists|first_index|get_indices|has|insert|is_a_permutation|is_empty|key|key_exists|key_index|last|last_index|max|max_index|max_value|min|min_index|min_value|or_all|pop|pop0|push|push0|product|resize|reverse|sort|split|sum|top|top0|unique|clear|is_all_iterations|get_enclosing_unit|hdl_path|exec|deep_compare|deep_compare_physical|pack|unpack|fatal)\b
+      match: \b(initialize|non_terminal|testgroup|delayed|exit|finish|out|print|outf|appendf|post_generate|pre_generate|setup_test|finalize_test|extract_test|init|run|copy|as_a|set_config|quit|lock|unlock|release|swap|quit|to_string|value|stop_run|get_config|get_indices|get_enclosing_unit|hdl_path|exec|deep_compare|deep_compare_physical|pack|unpack)\b
 
     - scope: keyword.control.specman
       match: \b(until|repeat|while|for|from|to|step|each|do|break|continue|before|next|sequence|always|-kind|network|index|it|me|in|return|result|select)\b
@@ -583,21 +617,6 @@ contexts:
 
     - scope: keyword.conditional.specman
       match: \b(case|casex|casez|default)\b
-
-    - scope: keyword.operator.word.specman
-      match: \b(and|or|not|xor)\b
-
-    - scope: keyword.operator.assignment.specman
-      match: '(=|\+=|-=|\*=|:=)'
-
-    - scope: keyword.operator.logical.specman
-      match: (==|!=|>|<|===|!===|>=|<=)
-
-    - scope: keyword.operator.arithmetic.specman
-      match: (-|\+|\*|/)
-
-    - scope: keyword.operator.bitwise.specman
-      match: (&|\|~|!|\^)
 
     - scope: keyword.temporal.specman
       match: \b(cycle|sample|events|forever|wait|change|negedge|rise|fall|delay|sync|sim|true|detach|eventually|emit)\b
@@ -622,6 +641,9 @@ contexts:
 
     - scope: storage.type.specman
       match: \b{{types}}\b
+
+    - scope: storage.type.list.specman
+      match: list\s+of\s+\w+
 
     - scope: punctuation.terminator.specman
       match: \s*;
