@@ -8,22 +8,22 @@ hidden: true
 
 variables:
   scalar_types: int|uint|longint|longuint|bit|nibble|byte|time|bool
-  types: ({{scalar_types}}|string|real|set|untyped|rdv_semaphore|semaphore|locker|external_pointer)
+  built_in_types: ({{scalar_types}}|string|real|set|untyped|rdv_semaphore|semaphore|locker|external_pointer)
   # The following should include all keywords which are invalid as a user defined name
-  built_in_functions: assert|error|compute|fatal|messagef|message|appendf|append|dut_error|read_only|value|warning
+  built_in_functions: \bassert\b|\berror\b|\bcompute\b|\bfatal\b|\bmessagef\b|\bmessage\b|\bappendf\b|\bappend\b|\bdut_error\b|\bread_only\b|\bvalue\b|\bwarning\b
   built_in_functions_optional_parens: assert|compute
   list_pseudo_methods: add|add0|clear|delete|fast_delete|insert|pop0|pop|push0|push|resize|all_different|apply|copy|count|exists|first|first_index|flatten|get_indices|has|is_a_permutation|is_empty|last|last_index|max|max_index|max_value|min|min_index|min_value|reverse|size|sort|sort_by_field|split|top0|top|unique|all|all_indices|and_all|or_all|average|product|sum|crc_8|crc_32|crc_32_flip|key|key_index|key_exists
   built_in_member_functions: hdl_path|reset_soft
-  built_in_variables: it|me|index
+  built_in_variables: \bit\b|\bm\b|\bindex\b
   built_in_constants: TRUE|FALSE|NULL|UNDEF|MAX_INT|MIN_INT|MAX_LONGINT|MIN_LONGINT|MAX_UINT|MAX_LONGUINT
-  invalid_names: keep|if|{{built_in_functions}}|{{built_in_variables}}
+  invalid_names: \bkeep\b|\bif\b|{{built_in_functions}}|{{built_in_variables}}
   scalar_range_modifier: \[\s*[a-zA-Z0-9_]+\s*\.\.\s*[a-zA-Z0-9_]+\s*\]
   scalar_width_modifier: \(\s*(?:bits|bytes)\s*:\s*[\d\*]+\s*\)
   # Valid name that can also be a hierarchical reference
   valid_name: ([a-zA-Z](?:[a-zA-Z0-9_.]+)?(?<!{{invalid_names}}))
   # Simple valid name
   valid_id: ([a-zA-Z](?:[a-zA-Z0-9_]+)?(?<!{{invalid_names}}))
-  valid_type: ((?:list\s+of\s+)?[a-zA-Z](?:[a-zA-Z0-9_]+)?(?:{{scalar_width_modifier})?)
+  valid_type: (?:list\s+of\s+)?{{valid_id}}\s*({{scalar_range_modifier}}\s*)?({{scalar_width_modifier}})?
   struct_access: package|protected|private
   concurrency_actions: first\s+of|all\s+of
 
@@ -45,7 +45,7 @@ contexts:
   prototype:
     - include: comments
 
-  #TODO: narrow down to 1.2.2 Statements
+  # 1.2.2 Statements
   code:
     - include: preprocessor
     - include: structs
@@ -56,9 +56,9 @@ contexts:
     - include: built-in-function-calls
     - include: scalar-type-definition
     - include: methods
-    - include: inline-generation
-    - include: struct-allocation
-    - include: code-block
+    # - include: inline-generation
+    # - include: struct-allocation
+    # - include: code-blocks
     - include: stray-brackets-code
     - include: tbd
     # - include: concurrency-block
@@ -189,7 +189,6 @@ contexts:
       scope: constant.character.literal.specman
 
   operators:
-
     - scope: keyword.operator.word.specman
       match: \b(and|or|not|now|in|in_table)\b
 
@@ -211,6 +210,7 @@ contexts:
       match: (&|\|~|!|\^)
 
   type-casting:
+    # TODO: add other syntax
     - match: \.(as_a)\s*(\()
       captures:
         1: keyword.other.specman
@@ -222,7 +222,7 @@ contexts:
           captures:
             1: punctuation.section.parens.end.specman
             2: punctuation.terminator.specman
-        - match: (?:\b{{valid_type}}|{{valid_id}}\b)
+        - match: (?:\b{{valid_type}}\b)
           scope: storage.type.specman
 
   # 2.7 Defining and extending scalar types
@@ -233,7 +233,9 @@ contexts:
         1: keyword.declaration.specman
         2: storage.type.specman
         3: storage.type.specman
-        4: punctuation.terminator.specman
+        4: storage.modifier.specman
+        5: storage.modifier.specman
+        6: punctuation.terminator.specman
     # start of (multi-line) enum declaration
     - match: '\b(type|extend)\b\s+{{valid_id}}\s*:\s*(\[\s*)'
       captures:
@@ -251,11 +253,9 @@ contexts:
     - match: (\s*,)?(?:\s*{{valid_id}}\s*)(=\s*)?
       captures:
         1: punctuation.separator.specman
-        2: storage.type.enum.specman
+        2: constant.other.enum.specman
         3: keyword.operator.assignment
     - match: '(\]\s*)({{scalar_width_modifier}})?(\s*;)?'
-    #- match: \](\s*;)?
-      #scope: punctuation.brackets.end.specman
       captures:
         1: punctuation.brackets.end.specman
         2: storage.modifier.specman
@@ -263,23 +263,20 @@ contexts:
       pop: true
 
   # 7.1 Defining and Extending Methods
-  # TODO: struct_access does not match, e.g final sync_enable_regs(trans : fme_iris_env_cfg_trans)@sys.any is
-  # see fme_iris_mgp_tlm_scbd.e lines 82ff
-  # TODO: need to distinguish method-parameters for declaration and call
-  # especically name({list}) which currently pushes code-block
   methods:
-    # - match: (?=^\s*(?:{{struct_access}}|static|final)?\s+[a-zA-Z](?:[a-zA-Z0-9_]+)?\s*\()
-    - match: (?=^\s*(?:{{struct_access}}|static|final)?\s+{{valid_id}}\s*\()
+    - match: (?=(?:{{struct_access}})?\s*(static\s+)?(final\s+)?\s*{{valid_id}}\s*\()
       push: method-declaration
 
   method-declaration:
-    - match: (?!\s+is\s+)
+    - match: (?!\bis\b)
       pop: true
-    - match: \s*({{struct_access}}|static|final)?\s+{{valid_id}}\s*(\()
+    - match: ({{struct_access}})?\s*(static\s+)?(final\s+)?\s*\b{{valid_id}}\b\s*(\()
       captures:
         1: storage.modifier.function.specman
-        2: meta.method.identifier.specman entity.name.function.specman
-        3: meta.method.parameters.specman punctuation.section.parens.begin.specman
+        2: storage.modifier.function.specman
+        3: storage.modifier.function.specman
+        4: meta.method.identifier.specman entity.name.function.specman
+        5: meta.method.parameters.specman punctuation.section.parens.begin.specman
       push: method-parameters
 
   method-parameters:
@@ -290,6 +287,8 @@ contexts:
         2: punctuation.separator.parameter.specman
         3: punctuation.accessor.parameter.specman
         4: storage.type.specman
+        5: storage.modifier.specman
+        6: storage.modifier.specman
     - match: (,)
       scope: punctuation.separator.parameter.specman
     - match: \)\s*(;)
@@ -306,7 +305,9 @@ contexts:
       captures:
         1: punctuation.separator.return-type.specman
         2: meta.method.return-type.specman storage.type.specman
-    - match: (\@)([a-zA-Z0-9_.]+)
+        3: storage.modifier.specman
+        4: storage.modifier.specman
+    - match: (\@){{valid_id}}
       captures:
         1: punctuation.accessor.event.specman
         2: keyword.control.function.event.specman
@@ -336,7 +337,7 @@ contexts:
     - include: struct-allocation
     - include: built-in-function-calls
     - include: variable-declaration
-    - include: code-block
+    - include: code-blocks
     - match: (\})\s*(;)
       captures:
         1: punctuation.section.method.end.specman
@@ -346,31 +347,34 @@ contexts:
 
   # 8.2 var
   variable-declaration:
-    - match: '(\bvar\b)\s*(?:{{valid_id}}\s*):\s*{{valid_type}}\s*({{scalar_range_modifier}})?\s*({{scalar_width_modifier}})?'
+    - match: '(\bvar\b)\s*(?:{{valid_id}}\s*):\s*{{valid_type}}'
       captures:
         1: keyword.declaration.specman
-        2: variable.other
+        2: variable.other.specman
         3: storage.type.specman
         4: storage.modifier.specman
         5: storage.modifier.specman
     - match: '(\bvar\b)\s*(?:{{valid_id}}\s*):\s*\s*(\[\s*)'
       captures:
         1: keyword.declaration.specman
-        2: variable.other
+        2: variable.other.specman
         3: punctuation.brackets.begin.specman
       push: enum-values-declaration
     # Implicitly typed variable
     - match: '(\bvar\b)\s*(?:{{valid_id}}\s*)(:=\s*)'
       captures:
         1: keyword.declaration.specman
-        2: variable.other
+        2: variable.other.specman
         3: keyword.operator.assignment
 
   # 1.1.5.2 Macros
   macros:
-    - match: ^\s*(define)\b
-      scope: meta.preprocessor.macro.specman keyword.control.import.define.specman
-      # TODO: push onto stack and parse macro definition/define
+    - match: ^\s*(\bdefine\b)\s+(?:{{valid_name}}\b)
+      scope: meta.preprocessor.macro.specman
+      captures:
+        1: keyword.control.define.specman
+        2: constant.other.specman
+      # TODO: push onto stack and parse macro definition for define-as and define-as-computed
 
   # 3.2.1 Structs
   structs:
@@ -413,9 +417,10 @@ contexts:
     - include: code
 
     # 3.5 Defining Fields
-    # TODO: Need to complete with  [[min-val .. max-val]]  [((bits | bytes):num)] [= init-value]
-    #       Note: min max and init val can be a MVL literal as well as an enum or string, we should define a variable for legal "values"
-    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?(!\s*)?(%\s*)?(?:{{valid_id}}\s*)(?:(\:)\s*{{valid_type}}\s*)?(;)
+    # TODO: Need to complete with [= init-value]
+    # TODO: add is_instance for units
+    # Match type with optional scalar modifiers
+    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?(!\s*)?(%\s*)?(?:{{valid_id}}\s*)(?:(\:)\s*{{valid_type}}\s*)\s*(;)
       captures:
         1: storage.modifier.access.specman
         2: storage.modifier.static.specman
@@ -425,7 +430,9 @@ contexts:
         6: variable.other.specman
         7: punctuation.separator.type.specman
         8: storage.type.specman
-        9: punctuation.terminator.specman
+        9: storage.modifier.specman
+        10: storage.modifier.specman
+        11: punctuation.terminator.specman
 
     - match: (\})\s*(;)
       pop: true
@@ -447,7 +454,7 @@ contexts:
 
     # TODO: extend regexp for full syntax
     # for each [(item-name)] [using index (index-name)] [prev (prev-name)]] in gen-list {constraint-def | nested-for-each; ...}
-    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)?\s*(\bfor\s+each\b)\s*(?:\(\s*{{valid_id}}\s*\)\s*)?(?:using\s+index\s*\(\s*{{valid_id}}\s*\)\s*)?in\s+(?:{{valid_name}})(\s*\{)
+    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)?\s*(\bfor\s+each\b)\s*(?:\(\s*{{valid_id}}\s*\)\s*)?(?:\busing\s+index\s*\(\s*{{valid_id}}\s*\)\s*)?in\s+(?:{{valid_name}})(\s*\{)
       captures:
         1: keyword.other.constraint.specman
         2: entity.name.label.specman
@@ -628,14 +635,14 @@ contexts:
         1: variable.language.specman
 
   # includes 15.1 Synchronization Actions
-  code-block:
+  code-blocks:
     - match: (\b{{concurrency_actions}}\b)?\s*\{
       captures:
         1: keyword.control.specman
       scope: punctuation.section.block.begin.specman
       push:
+        - meta_content_scope: meta.code_block.specman
         - include: actions
-
 
   # code-blocks:
   #   - match: \{
@@ -705,7 +712,7 @@ contexts:
       match: \b(initial|idle|others|posedge|clock|cycles)\b
 
     - scope: storage.type.specman
-      match: \b{{types}}\b
+      match: \b{{built_in_types}}\b
 
     - scope: storage.type.list.specman
       match: list\s+of\s+\w+
