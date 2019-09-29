@@ -1,7 +1,11 @@
 <'
 
+type bla: [BLUE, GREEN, YELLOW](bits: 2);
+
 extend sys {
     l1[20] : list of byte;
+
+    final sync_me(trans: cfg_trans)@sys.any is undefined;
 
     run() is also {
         var a: int;
@@ -15,8 +19,15 @@ extend sys {
         all of {
             start foo();
         };
-      };
+    };
+
+    const member1: uint(bits:23);
+    member2: list of my_struct_s;
+
+    final sync_me(trans: cfg_trans, a: uint[0..7])@sys.any is only {
+        -- body of method
     };
 };
 
+extend bla: [BLACK];
 '>

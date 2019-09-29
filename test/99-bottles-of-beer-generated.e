@@ -12,7 +12,7 @@ for each in bla {
 extend sys  {
    lyrics: list of string;
    keep lyrics.size() == 200;
-   keep beer_constraint is for each using index (n) in lyrics  {
+   keep beer_c is for each (o) using index (n) in lyrics  {
       n==0                   => it == appendf("Go to the store and buy some more, 99 bottles of beer on the wall.");
       ((n%2==1) and (n!= 0)) => it == appendf("%s bottle%s of beer on the wall, %s bottle%s of beer.",
                                                   (n==1 ? "No more":(n/2).as_a(string)),
