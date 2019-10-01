@@ -12,7 +12,7 @@ extend sys {
         var e1: [a,b,c];
         var e2: [a,b,c](bits:2);
         var x: int(bits:4);
-        var y: longuint[0..21 ] ( bits: 5);
+        var y: longuint[0..21 ] (bits: 5);
         print l1.apply(it > 127 ? 1 : 0);
         print l1.apply(it > 127 ? 1'b1 : 1'b0);
 
@@ -22,9 +22,9 @@ extend sys {
     };
 
     const member1: uint(bits:23);
-    member2: list of my_struct_s;
+    member2: list of list of my_struct_s;
 
-    final sync_me(trans: cfg_trans, a: uint[0..7])@sys.any is only {
+    final sync_me (trans: cfg_trans, a: uint[0..7])@sys.any is only {
         -- body of method
     };
 };
