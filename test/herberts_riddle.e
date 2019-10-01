@@ -90,6 +90,6 @@ extend sys {
    post_generate() is also {
       render_disc(ring_turns, TRUE);
    };
-}
+};
 
 '>

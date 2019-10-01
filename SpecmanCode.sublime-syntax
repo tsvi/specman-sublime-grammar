@@ -8,12 +8,13 @@ hidden: true
 
 variables:
   scalar_types: int|uint|longint|longuint|bit|nibble|byte|time|bool
-  built_in_types: ({{scalar_types}}|string|real|set|untyped|rdv_semaphore|semaphore|locker|external_pointer)
+  built_in_types: ({{scalar_types}}|string|real|set|untyped|rdv_semaphore|semaphore|locker|external_pointer|any_buffer_port)
   # The following should include all keywords which are invalid as a user defined name
-  built_in_functions: assert|error|compute|fatal|messagef|message|appendf|append|dut_error|read_only|value|warning
-  built_in_functions_optional_parens: assert|compute
+  built_in_functions: assert|error|fatal|messagef|message|appendf|append|dut_error|read_only|value|warning
+  built_in_functions_optional_parens: assert
   list_pseudo_methods: add|add0|clear|delete|fast_delete|insert|pop0|pop|push0|push|resize|all_different|apply|copy|count|exists|first|first_index|flatten|get_indices|has|is_a_permutation|is_empty|last|last_index|max|max_index|max_value|min|min_index|min_value|reverse|size|sort|sort_by_field|split|top0|top|unique|all|all_indices|and_all|or_all|average|product|sum|crc_8|crc_32|crc_32_flip|key|key_index|key_exists
-  built_in_member_functions: hdl_path|reset_soft
+  set_pseudo_methods: size|uint_size|size_is_uint|min|max|int_min|int_max|min_is_int|max_is_int|uint_min|uint_max|min_is_uint|max_is_uint|get_all_ranges|collect_all_ranges|get_range|get_range_below|get_range_above
+  built_in_member_functions: hdl_path|external_type|hdl_convertor|hdl_expression|reset_soft|e_impl|driver|driver_delay|edge|inverse|pack_options|pli_access|pli_field_access|read_type
   built_in_variables: \sit|\sme|\sindex
   built_in_constants: TRUE|FALSE|NULL|UNDEF|MAX_INT|MIN_INT|MAX_LONGINT|MIN_LONGINT|MAX_UINT|MAX_LONGUINT
   # Note; the keywords should be enclosed with \b but this is not supported in negative-look-behind in ST3 Build < 3200
@@ -55,6 +56,7 @@ contexts:
     - include: operators
     - include: type-casting
     - include: built-in-function-calls
+    - include: function-calls
     - include: scalar-type-definition
     # TODO: method-type-definition
     - include: methods
@@ -62,6 +64,25 @@ contexts:
     # - include: struct-allocation
     - include: code-blocks
     - include: stray-brackets-code
+    - include: tbd
+
+  # 1.2.4 Actions
+  actions:
+    - meta_content_scope: meta.actions.specman
+    - include: literals
+    - include: operators
+    - include: type-casting
+    - include: built-in-function-calls
+    - include: function-calls
+    - include: inline-generation
+    - include: struct-allocation
+    - include: variable-declaration
+    - include: code-blocks
+    - match: (\})\s*(;)?
+      captures:
+        1: punctuation.section.block.end.specman
+        2: punctuation.terminator.specman
+      pop: true
     - include: tbd
 
   stray-brackets-code:
@@ -228,7 +249,6 @@ contexts:
   # 2.7 Defining and extending scalar types
   scalar-type-definition:
     - match: '\b(type|extend)\b\s+{{valid_id}}\s*:\s*{{valid_type}}(\s*;)?'
-      scope: storage.type.specman
       captures:
         1: keyword.declaration.specman
         2: storage.type.specman
@@ -245,8 +265,7 @@ contexts:
       push: enum-values-declaration
 
   enum-values-declaration:
-    - meta_content_scope: meta.enum.specman
-    - include: literals
+    - meta_content_scope: meta.type.enum.specman
     - match: (\s*,)
       captures:
         1: punctuation.separator.specman
@@ -254,15 +273,45 @@ contexts:
       captures:
         1: punctuation.separator.specman
         2: constant.other.enum.specman
-        3: keyword.operator.assignment
+        3: keyword.operator.assignment.specman
     - match: '(\]\s*)({{scalar_width_modifier}})?(\s*;)?'
       captures:
         1: punctuation.brackets.end.specman
         2: storage.modifier.specman
         3: punctuation.terminator.specman
       pop: true
+    - include: literals
+    - include: operators
 
-  # TODO: add function-calls and set it from method-declaration
+  # 7.2 Invoking methods
+  function-calls:
+    - match: \b(compute|start)\b\s+\b{{valid_name}}\b\s*(\()
+      captures:
+        1: keyword.other.specman
+        2: variable.function.specman
+        3: meta.method.parameters.specman punctuation.section.parens.begin.specman
+      push: function-parameters
+    - match: \.{{valid_name}}\b\s*(\()
+      captures:
+        1: variable.function.specman
+        2: meta.function-call.specman punctuation.section.parens.begin.specman
+      push: function-parameters
+
+  function-parameters:
+    - match: (,)
+      scope: punctuation.separator.parameter.specman
+    - match: \)\s*(;)
+      scope: punctuation.section.parens.end.specman
+      captures:
+        1: punctuation.terminator.specman
+      pop: true
+    - include: literals
+    - include: operators
+    - include: type-casting
+    - include: built-in-function-calls
+    - include: function-calls
+    - include: tbd
+
   # 7.1 Defining and Extending Methods
   methods:
     - match: (?=(?:{{struct_access}})?\s*(static\s+)?(final\s+)?\s*\b{{valid_id}}\b\s*\()
@@ -281,7 +330,6 @@ contexts:
       push: method-parameters
 
   method-parameters:
-    # TODO: add default parameter values
     - meta_content_scope: meta.method.parameters.specman
     - match: (?:{{valid_id}}\s*(:)\s*(?:(\*)?{{valid_type}}))
       captures:
@@ -301,6 +349,8 @@ contexts:
     - match: \)
       scope: punctuation.section.parens.end.specman
       set: method-declaration-end
+    - include: literals
+    - include: operators
 
   method-declaration-end:
     - match: (:)\s*{{valid_type}}
@@ -313,7 +363,7 @@ contexts:
       captures:
         1: punctuation.accessor.event.specman
         2: keyword.control.function.event.specman
-    - match: (is)\s+(empty|undefined)\s*(;)
+    - match: (is)\s+(empty|undefined|import.*)\s*(;)
       captures:
         1: keyword.other.function.specman
         2: keyword.modifier.function.specman
@@ -326,25 +376,6 @@ contexts:
     - match: \{
       scope: punctuation.section.method.begin.specman
       set: actions
-
-  # 1.2.4 Actions
-  actions:
-    # TODO: add method calls
-    - meta_content_scope: meta.actions.specman
-    - include: literals
-    - include: operators
-    - include: type-casting
-    - include: built-in-function-calls
-    - include: inline-generation
-    - include: struct-allocation
-    - include: variable-declaration
-    - include: code-blocks
-    - match: (\})\s*(;)?
-      captures:
-        1: punctuation.section.block.end.specman
-        2: punctuation.terminator.specman
-      pop: true
-    - include: tbd
 
   # 8.2 var
   variable-declaration:
@@ -366,7 +397,7 @@ contexts:
       captures:
         1: keyword.declaration.specman
         2: variable.other.specman
-        3: keyword.operator.assignment
+        3: keyword.operator.assignment.specman
 
   # 1.1.5.2 Macros
   macros:
@@ -378,6 +409,7 @@ contexts:
       # TODO: push onto stack and parse macro definition for define-as and define-as-computed
 
   # 3.2.1 Structs
+  # TODO: add template, or at least prevent template breaking this
   structs:
     - match: (?=^\s*struct\s+{{valid_id}}(?:\s+(like)\s+{{valid_id}})?\s*\{)
       push: struct-declaration
@@ -428,22 +460,26 @@ contexts:
     - include: code
 
     # 3.5 Defining Fields
-    # TODO: Need to complete with [= init-value]
+    # TODO: add method_port, simple_port, event_port, buffer_port
     # TODO: add is_instance for units
+    # TODO: lists and keyed lists (\[\s*[0-9A-Za-z_]+\s*\]\s*)*
     # Match type with optional scalar modifiers
-    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?(!\s*)?(%\s*)?(?:{{valid_id}}\s*)(?:(\:)\s*{{valid_type}}\s*)\s*(;)
+    # Match type with optional scalar modifiers
+    # Setting initial values with = we handle simply by terminating the match-expression
+    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?(!\s*)?(%\s*)?(?:{{valid_id}}\s*)(?:(\:)\s*{{valid_type}}\s*)\s*(\bis\sinstance\b)?\s*(;|=)
       captures:
         1: storage.modifier.access.specman
         2: storage.modifier.static.specman
         3: storage.modifier.const.specman
         4: punctuation.definition.variable.ungenerated.specman
         5: punctuation.definition.variable.physical.specman
-        6: variable.other.specman
+        6: variable.other.member.specman
         7: punctuation.separator.type.specman
         8: storage.type.specman
         9: storage.modifier.specman
         10: storage.modifier.specman
-        11: punctuation.terminator.specman
+        11: storage.modifier.specman
+        12: punctuation.terminator.specman
 
     - match: (\})\s*(;)
       pop: true
@@ -568,6 +604,7 @@ contexts:
       scope: punctuation.section.constraint.begin.specman
       push: inline-constraints
 
+  # TODO: include syntax
   inline-constraints:
     - match: \}(?=;)
       scope: punctuation.section.constraint.end.specman
@@ -610,7 +647,7 @@ contexts:
   built-in-function-calls:
     - match: ({{built_in_functions}})\s*(\()
       captures:
-        1: keyword.function.builtin.specman
+        1: variable.function.builtin.specman
         2: punctuation.section.parens.begin.specman
       push:
         - meta_scope: meta.function-call.builtin.specman
@@ -622,7 +659,7 @@ contexts:
         - include: code
     - match: ({{built_in_functions_optional_parens}}\s+)
       captures:
-        1: keyword.function.builtin.specman
+        1: variable.function.builtin.specman
       push:
         - meta_scope: meta.function-call.builtin.specman
         - match: \s*(;)
@@ -630,11 +667,10 @@ contexts:
           captures:
             1: punctuation.terminator.specman
         - include: code
-    - match: (?:\s*{{valid_name}})\.({{list_pseudo_methods}}|{{built_in_member_functions}})\s*(\()
+    - match: \.({{list_pseudo_methods}}|{{built_in_member_functions}}|{{set_pseudo_methods}})\s*(\()
       captures:
-        1: variable.other.specman
-        2: keyword.function.builtin.specman
-        3: punctuation.section.parens.begin.specman
+        1: variable.function.builtin.specman
+        2: punctuation.section.parens.begin.specman
       push:
         - meta_scope: meta.function-call.builtin.specman
         - match: (\))\s*(;)?
@@ -667,20 +703,6 @@ contexts:
         - meta_content_scope: meta.code_block.specman
         - include: actions
 
-  # code-blocks:
-  #   - match: \{
-  #     scope: punctuation.section.block.begin.specman
-  #     # push:
-  #     #- meta_content_scope: meta.code_block.specman
-  #     #- match: '\}\s*(;)?'
-  #     #  scope: punctuation.section.block.end.specman
-  #     #  captures:
-  #     #    1: punctuation.terminator.specman
-  #     #  pop: true
-  #     #- include: actions
-  #     push:
-  #     - include: actions
-
   preprocessor:
     - match: \s*(?:\}\s*)?(#\s*(?:ifdef|ifndef|else))\s*((?:`)?{{valid_id}})?\s*(\{)
       captures:
@@ -694,18 +716,30 @@ contexts:
       - match: \}
         scope: punctuation.section.block.end.specman
         pop: true
+    # Method-type declaration
+    - match: (\bmethod_type\b)\s+\b{{valid_id}}\b\s*(\()
+      captures:
+        1: meta.function.method_type.specman keyword.declaration.specman
+        2: entity.name.function.specman
+        5: punctuation.section.parens.begin.specman
+      push:
+        - match: \)
+          scope: punctuation.section.parens.end.specman
+          pop: true
+        - include: literals
+        - include: operators
 
 #######
 
   tbd:
     - scope: keyword.statement.specman
-      match: \b(instance|on|event|expect|check|that|routine|specman|like|radix|hex|dec|bin|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
+      match: \b(template|instance|on|event|expect|check|that|routine|specman|like|radix|hex|dec|bin|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
 
     - scope: variable.function.specman meta.function-call
       match: \b(initialize|non_terminal|testgroup|delayed|exit|finish|out|print|outf|appendf|post_generate|pre_generate|setup_test|finalize_test|extract_test|init|run|copy|set_config|quit|lock|unlock|release|swap|quit|to_string|value|stop_run|get_config|get_indices|get_enclosing_unit|hdl_path|exec|deep_compare|deep_compare_physical|pack|unpack)\b
 
     - scope: keyword.control.specman
-      match: \b(start|until|repeat|while|for|from|to|step|each|do|break|continue|before|next|sequence|always|-kind|network|index|it|me|in|return|result)\b
+      match: \b(until|repeat|while|for|from|to|step|each|do|break|continue|before|next|sequence|always|-kind|network|index|it|me|in|return|result)\b
 
     - scope: keyword.packing.specman
       match: \b(packing|low|high)\b
@@ -720,13 +754,10 @@ contexts:
       match: \b(cycle|sample|events|forever|wait|change|negedge|rise|fall|delay|sync|sim|true|detach|eventually|emit)\b
 
     - scope: keyword.define.specman
-      match: \b(as|computed|verilog|vhdl|variable|global|sys)\b
-
-    - scope: keyword.control.import.specman
-      match: \b(import)\b
+      match: \b(define|as|computed|verilog|vhdl|variable|global|sys)\b
 
     - scope: keyword.special.specman
-      match: \b(untyped|symtab|ECHO|DOECHO)\b
+      match: \b(symtab|ECHO|DOECHO)\b
 
     - scope: keyword.file.specman
       match: \b(files|load|module|ntv|source_ref|script|read|write)\b
