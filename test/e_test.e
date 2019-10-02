@@ -9,6 +9,7 @@ export DPI-C verifier.e_impl();
 method_type str2uint_method_t (s: string):uint;
 method_type str2uint_method_t (s: string):uint @sys.any;
 
+
 type bla: [BLUE, GREEN, YELLOW](bits: 2);
 
 extend sys {
@@ -38,13 +39,27 @@ extend sys {
         compute foo();
 
         print {3;4;5}.min(it);
+
+        -- TODO: DEBUG
+        msg = appendf("%s] triggered by %s", msg, str_join(source_events.apply(.to_string()), " and "));
     };
 
     const member1: uint(bits:23);
     member2: list of list of my_struct_s;
 
     final sync_me (trans: cfg_trans, a: uint[0..7], b: bool = TRUE)@sys.any is only {
-        -- body of method
+      -- TODO: DEBUG
+      if (ls.size() > 2) {
+         var pix: fme_video_rgb_s = new;
+         var r8 : uint = ls[0].as_a(uint);
+         var g8 : uint = ls[1].as_a(uint);
+         pix.r = r8.as_a(uint (bits:8));
+         pix.g = g8.as_a(uint (bits:8));
+         img.data.add(pix);
+      } else {
+          message(NONE, "Error: Cannot read color data.");
+          break;
+      };
     };
 };
 
