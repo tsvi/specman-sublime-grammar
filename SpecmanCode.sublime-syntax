@@ -69,6 +69,7 @@ contexts:
   # 1.2.3 Struct Members
   code:
     - meta_content_scope: meta.class.body.specman
+    # TODO: make base-grammar out of the first scopes here
     - include: literals
     - include: operators
     - include: built-in-variables
@@ -477,25 +478,6 @@ contexts:
             2: punctuation.terminator.specman
         - include: code
 
-    #- match: \b(extend)\s+(?:{{valid_id}}\s+)+(?={{valid_id}}\s*\{)
-    #  captures:
-    #    1: keyword.declaration.class.specman
-    #    2: meta.class.identifier.specman entity.name.class.specman
-    #  set:
-    #    - match: (?:\b{{valid_id}}\s*)
-    #      meta_scope: entity.other.inherited-class.specman
-    #    - match: \{
-    #      scope: punctuation.section.class.begin.specman
-    #      set: member-declaration
-    ## capture arbitrary syntax for extend (common multi-extend macro)
-    #- match: \b(extend)\s+(.*)\s*\b{{valid_id}}\b\s*(\{)
-    #  captures:
-    #    1: keyword.declaration.class.specman
-    #    2: entity.other.inherited-class.specman
-    #    3: meta.class.identifier.specman entity.name.class.specman
-    #    4: punctuation.section.class.begin.specman
-    #  set: member-declaration
-
   member-declaration:
     # 3.5 Defining Fields
     # TODO: add method_port, simple_port, event_port, buffer_port
@@ -603,13 +585,14 @@ contexts:
 
     # implication without block
     # use look-ahead to allow matching the LHS expression elsewhere
-    # TODO: maybe need to open scope ending with ; and including actions
+    # TODO: maybe need to open scope ending with ; and including literals/operators etc.
     - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)?\s*(?=.*\s*(=>))
       captures:
         1: keyword.other.constraint.specman
         2: entity.name.label.specman
         3: keyword.modifier.constraint.specman
         5: keyword.operator.logical.specman
+      push: constraint-expression
 
     # before
     - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)?\s*(?:{{valid_name}}\s*)(\bbefore\b)\s*(?:{{valid_name}})(;)
@@ -633,12 +616,23 @@ contexts:
         6: keyword.other.constraint.specman
 
     # All other constraints not matched above
-    # TODO: maybe need to open scope ending with ; and including actions
+    # TODO: maybe need to open scope ending with ; and including literals/operators etc.
     - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)?\s*
       captures:
         1: keyword.other.constraint.specman
         2: entity.name.label.specman
         3: keyword.modifier.constraint.specman
+      push: constraint-expression
+
+  constraint-expression:
+    - include: literals
+    - include: operators
+    - include: built-in-variables
+    - include: type-casting
+    - include: built-in-function-calls
+    - match: ;
+      scope: punctuation.terminator.specman
+      pop: true
 
   # TODO: just add keywords and delegate to code-block
   inline-generation:
@@ -651,6 +645,7 @@ contexts:
   inline-generation-constraint:
     - meta_content_scope: meta.constraint.specman
     - match: ;
+      scope: punctuation.terminator.specman
       pop: true
     - match: \bkeeping\b
       scope: keyword.other.constraint.specman
@@ -726,14 +721,6 @@ contexts:
   function-calls:
     - match: (?=\b{{valid_name}}\b\s*\()
       push: function-consume
-    # Member function if not matched before
-    #- match: \.{{valid_name}}\b\s*(\()
-    #  captures:
-    #    1: variable.function.specman
-    #    2: punctuation.section.parens.begin.specman
-    #  push:
-    #    - meta_scope: meta.function-call.specman
-    #    - include: function-call-parameters
 
   function-consume:
     - match: (?<!\bis\sa)   # type-cast
