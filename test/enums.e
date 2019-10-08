@@ -15,9 +15,11 @@ extend sys {
 
 type value_t: uint(bits: 10);
 
-type value2_t: uint;
+type value2_t: uint[0..10];
 
-type my_enum0: [ ID0=2 , ID1= 5];
+type my_enum0: [ ID0=2 ,
+   ID1= 5
+];
 
 type my_enum1: [ ID0 = 3
       , ID1];

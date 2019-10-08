@@ -20,7 +20,7 @@ bla
 
       keep a.all_different();
 
-      keep soft lst == {q;w;e;r;t};
+      keep soft lst == {q;w;e;r;t}.sort();
       keep soft lst_elem in {a;b};
 
       keep soft for each (bla) using index (i) in lst {
@@ -30,7 +30,7 @@ bla
       };
 
       keep foo => all of {
-         x.unique();
+         l.unique();
       };
 
       keep my_constraint is  all of {

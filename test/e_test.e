@@ -17,7 +17,7 @@ extend sys {
 
     obj: obj_s is instance;
 
-    final sync_me(trans: cfg_trans)@sys.any is undefined;
+    final sync_all(trans: cfg_trans)@sys.any is undefined;
 
     my_e_import(i:int,s:string):int is import DPI-C sv_impl;
 
@@ -27,18 +27,36 @@ extend sys {
         var e2: [a,b,c](bits:2);
         var x: int(bits:4);
         var y: longuint[0..21 ] (bits: 5);
-        print l1.apply(it > 127 ? 1 : 0);
-        print l1.apply(it > 127 ? 1'b1 : 1'b0);
+        out(b.l1.apply(it > 127 ? 1 : 0));
+        var s: string := l1.apply(it > 127 ? 1'b1 : 1'b0);
 
-        all of {
+        assert a==0;
+        first of {
             start foo(a+b);
         };
 
-        var l: list of int;
+        var l: list of int = {1;2;7;4}.sort();
+        l = l.reverse(); -- TODO: DEBUG
 
+        bar();
         compute foo();
 
         print {3;4;5}.min(it);
+        outf("built-in function");
+
+        q = get_info(bar).member_function();
+
+        if p is a BLUE color_s (blue) {
+          print p;
+        };
+
+        p = new;
+        p = new with { it.enable };
+        p = new colors_s;
+
+        if p is a GREEN color_s (green) {
+
+        };
 
         -- TODO: DEBUG
         msg = appendf("%s] triggered by %s", msg, str_join(source_events.apply(.to_string()), " and "));
@@ -47,8 +65,7 @@ extend sys {
     const member1: uint(bits:23);
     member2: list of list of my_struct_s;
 
-    final sync_me (trans: cfg_trans, a: uint[0..7], b: bool = TRUE)@sys.any is only {
-      -- TODO: DEBUG
+    final sync_all (trans: cfg_trans, a: uint[0..7], b: bool = TRUE)@sys.any is only {
       if (ls.size() > 2) {
          var pix: fme_video_rgb_s = new;
          var r8 : uint = ls[0].as_a(uint);
