@@ -11,6 +11,7 @@ method_type str2uint_method_t (s: string):uint @sys.any;
 
 
 type bla: [BLUE, GREEN, YELLOW](bits: 2);
+type int_small: uint[0..500](bits: 10);
 
 extend sys {
     l1[20] : list of byte;
@@ -24,10 +25,10 @@ extend sys {
     run() is also {
         var a: int = 0;
         var e1: [a,b,c];
-        var e2: [a,b,c](bits:2);
+        var e2: [a,b,c](bits: 0b10);
         var x: int(bits:4);
         var y: longuint[0..21 ] (bits: 5);
-        out(b.l1.apply(it > 127 ? 1 : 0));
+        out(b.l1.apply(it > 0x7f ? 1 : 0));
         var s: string := l1.apply(it > 127 ? 1'b1 : 1'b0);
 
         assert a==0;
