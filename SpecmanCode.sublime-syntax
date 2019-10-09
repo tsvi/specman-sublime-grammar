@@ -2,7 +2,20 @@
 ---
 name: SpecmanCode
 
+# The e-syntax hierarchy roughly corresponds to the level of indentation shown below:
+#
+# statements
+#     struct members
+#         actions
+#             expressions
+# This is not fully mapped here, to avoid too deep nesting of scopes and also
+# because e.g. expressions can be used in struct memebers
+#
+# There is a rich set of support functions in the e-language and it is also
+# still undergoing evolution, so not all constructs might be supported ATM.
+#
 # Note: Numbered comments refer to chapters in the Specman e Language reference
+
 scope: source.specman
 hidden: true
 
@@ -11,24 +24,34 @@ variables:
   built_in_types: ({{scalar_types}}|string|real|set|untyped|rdv_semaphore|semaphore|locker|external_pointer|any_buffer_port)
   built_in_constants: TRUE|FALSE|NULL|UNDEF|MAX_INT|MIN_INT|MAX_LONGINT|MIN_LONGINT|MAX_UINT|MAX_LONGUINT
 
+  # Tags in comment.line that will be highlighted
+  comment_tags: 'TODO:?|DEBUG:?'
+
   # Pre-defined functions
   string_functions: hex|dec|bin|quote|str_chop|str_empty|str_exactly|str_insensitive|str_join|str_len|str_lower|str_match|str_pad|str_replace|str_split|str_split_all|str_sub|str_upper
   arithmetic_functions: abs|odd|even|ilog2|ilog10|ipow|isqrt|div_round_up
   real_number_functions: dist_uniform|dist_normal|rdist_uniform|rdist_normal
   bitwise_functions: bitwise_or|bitwise_nand|bitwise_xor|bitwise_nor|bitwise_xnor
-  built_in_functions: assert|error|fatal|{{string_functions}}|{{arithmetic_functions}}|{{bitwise_functions}}|{{real_number_functions}}|messagef|message|appendf|append|dut_errorf|dut_error|read_only|value|warning|sn_unique_id_for_struct|deep_copy|deep_compare|deep_compare_physical|bitwise_and|out|outf
+  output_functions: messagef|message|appendf|append|dut_errorf|dut_error|out|outf
+  unit_functions: get_unit|get_all_units|get_enclosing_unit|try_enclosing_unit|set_unit
+  built_in_functions: assert|warning|error|fatal|{{string_functions}}|{{arithmetic_functions}}|{{bitwise_functions}}|{{real_number_functions}}|{{output_functions}}|{{unit_functions}}|read_only|value|sn_unique_id_for_struct|deep_copy|deep_compare|deep_compare_physical|bitwise_and
+
+  # Pre-defined functions that dont need parentheses
   built_in_functions_optional_parens: assert|print
+
+  # functions called member-function-style
   list_pseudo_methods: add|add0|clear|delete|fast_delete|insert|pop0|pop|push0|push|resize|all_different|apply|copy|count|exists|first|first_index|flatten|get_indices|has|is_a_permutation|is_empty|last|last_index|max|max_index|max_value|min|min_index|min_value|reverse|size|sort|sort_by_field|split|top0|top|unique|all|all_indices|and_all|or_all|average|product|sum|crc_8|crc_32|crc_32_flip|key|key_index|key_exists
   set_pseudo_methods: size|uint_size|size_is_uint|min|max|int_min|int_max|min_is_int|max_is_int|uint_min|uint_max|min_is_uint|max_is_uint|get_all_ranges|collect_all_ranges|get_range|get_range_below|get_range_above
   built_in_member_functions: hdl_path|external_type|hdl_convertor|hdl_expression|reset_soft|e_impl|driver|driver_delay|edge|inverse|pack_options|pli_access|pli_field_access|read_type|to_string
 
   # The following should include all keywords which are invalid as a user defined name
   # Note; the keywords should be enclosed with \b but this is not supported in negative-look-behind in ST3 Build < 3200
-  struct_access: package|protected|private
   built_in_variables: it|me|index|result
   invalid_names: keep| if| if|static|const|{{struct_access}}|{{built_in_variables}}
 
   # Re-usable patterns
+  struct_access: package|protected|private
+  concurrency_actions: first\s+of|all\s+of
   #scalar_range_modifier: '\[\s*[a-zA-Z0-9_\-\+%]+\s*\.\.\s*[a-zA-Z0-9_\-\+%]+\s*\]'
   scalar_range_modifier: '\[\s*\S+\s*\.\.\s*\S+\s*\]'
   scalar_width_modifier: \(\s*(?:bits|bytes)\s*:\s*[\d\*]+\s*\)
@@ -42,7 +65,6 @@ variables:
   valid_type: (?:list\s+of\s+)*(?:{{valid_id}}\s*)(?=(?:{{scalar_range_modifier}})?\s*(?:{{scalar_width_modifier}})?)
   valid_type_no_modifier: (?:list\s+of\s+)*(?:{{valid_id}}\s*)
   valid_struct_type: (?:list\s+of\s+)*(?:\s+{{valid_determinant}}\s*)+
-  concurrency_actions: first\s+of|all\s+of
   valid_scalar_type: (?:list\s+of\s+)*\b({{scalar_types}})(?=(?:{{scalar_range_modifier}})?\s*(?:{{scalar_width_modifier}})?)
 
 contexts:
@@ -152,12 +174,26 @@ contexts:
   # 1.1.3 Comments and White space
   comments:
     - match: (//|--)
-      scope: punctuation.definition.comment.specman
+      scope: punctuation.section.comment.specman
       push: comment-contents
+    - match: (^'>)
+      scope: punctuation.section.comment.begin.specman
+      push: comment-multiline
 
   comment-contents:
     - meta_scope: comment.line.specman
+    - meta_include_prototype: false
+    # Highlight TODO in comments
+    - match: \b{{comment_tags}}
+      scope: invalid
     - match: \n
+      pop: true
+
+  comment-multiline:
+    - meta_scope: comment.block.specman
+    - meta_include_prototype: false
+    - match: (^<')
+      scopë: punctuation.section.comment.end.specman
       pop: true
 
   string:
@@ -798,21 +834,6 @@ contexts:
       scope: punctuation.terminator.specman
       pop: true
 
-#  function-parameters:
-#    - match: (,)
-#      scope: punctuation.separator.parameter.specman
-#    - match: \)\s*(;)?
-#      scope: punctuation.section.parens.end.specman
-#      captures:
-#        1: punctuation.terminator.specman
-#      pop: true
-#    - include: literals
-#    - include: operators
-#    - include: type-casting
-#    - include: built-in-function-calls
-#    - include: function-calls
-#    - include: tbd
-
   built-in-variables:
     - match: \b({{built_in_variables}})\b
       captures:
@@ -880,17 +901,17 @@ contexts:
     - scope: keyword.other.new.specman
       match: \bnew\b
 
-    - scope: keyword.statement.specman
+    - scope: keyword.other.statement.specman
       match: \b(export|extend|template|on|event|expect|check|that|routine|specman|radix|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
 
     - scope: support.function.builtin.specman meta.function-call.builtin.specman
-      match: \b(dut_error|initialize|non_terminal|testgroup|delayed|exit|finish|post_generate|pre_generate|setup|setup_test|finalize_test|extract_test|init|run|copy|set_config|quit|lock|unlock|release|swap|quit|value|stop_run|get_config|get_indices|get_enclosing_unit|exec|pack|unpack)\b
+      match: \b(dut_error|initialize|delayed|exit|finish|post_generate|pre_generate|setup|setup_test|finalize_test|extract_test|init|run|copy|set_config|quit|lock|unlock|release|swap|quit|value|stop_run|get_config|get_indices|exec|pack|unpack)\b
 
     - scope: keyword.control.specman
-      match: \b(until|repeat|while|for|from|to|step|each|do|break|continue|before|next|sequence|always|-kind|network|in|return|result)\b
+      match: \b(until|repeat|while|for|from|to|step|each|do|break|continue|before|next|sequence|always|in|return)\b
 
-    - scope: keyword.packing.specman
-      match: \b(packing|low|high)\b
+    - scope: keyword.other.packing.specman
+      match: \b(packing|low|high|network)\b
 
     - scope: keyword.conditional.specman
       match: \b(choose|matches|if|then|else|try)\b
@@ -901,23 +922,23 @@ contexts:
     - scope: keyword.other.temporal.specman
       match: \b(cycle|sample|events|forever|wait|change|negedge|rise|fall|delay|sync|sim|true|detach|eventually|emit)\b
 
-    - scope: keyword.define.specman
-      match: \b(define|as|computed|verilog|vhdl|variable|global|sys)\b
+    - scope: keyword.other.define.specman
+      match: \b(define|as|computed|verilog|vhdl|variable)\b
+
+    - scope: keyword.other.singleton.specman
+      match: \b({{singletons}})\b
 
     - scope: keyword.special.specman
       match: \b(DPI-C|symtab|ECHO|DOECHO)\b
 
-    - scope: keyword.file.specman
+    - scope: keyword.other.file.specman
       match: \b(files|load|module|ntv|source_ref|script|read|write)\b
 
-    - scope: keyword.fsm.specman
+    - scope: keyword.other.fsm.specman
       match: \b(initial|idle|others|posedge|clock|cycles)\b
 
     - scope: storage.modifier.specman
-      match: \bis\s+instance\b|\blist\s+of\b|\battribute\b
-
-    #- scope: storage.type.list.specman
-    #  match: (list\s+of\s+)+\w+
+      match: \b(is\s+instance|list\s+of|attribute)\b
 
     - scope: punctuation.terminator.specman
       match: \s*;

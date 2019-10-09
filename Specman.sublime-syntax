@@ -1,18 +1,22 @@
 %YAML 1.2
 ---
+
+# Note: by default, a .e file is comment until a code-segment is started.
+# To reflect this, I splitted the syntax definition into two files
+#
+# Note: numbered omments refer to chapters in the Specman e Language reference
+
 name: Specman
 file_extensions:
   - e
 
-# Comments refer to chapters in the Specman e Language reference
 scope: text.specman
 
 contexts:
   main:
     # 1.1.2 Code segments
-    # Note: by default, a .e file is comment until a code-segment is started.
-    # To reflect this, I splitted the syntax definition into two files
     - match: ^(<')
-      embed: SpecmanCode.sublime-syntax
-      escape: ^('>)
+      scope: punctuation.section.comment.begin.specman
+      push: SpecmanCode.sublime-syntax
+
 # end
