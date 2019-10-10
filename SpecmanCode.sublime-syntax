@@ -50,6 +50,7 @@ variables:
   invalid_names: keep| if| if|static|const|{{struct_access}}|{{built_in_variables}}
 
   # Re-usable patterns
+  singletons: sys|global|utils|message_manager  # TODO: add moe
   struct_access: package|protected|private
   concurrency_actions: first\s+of|all\s+of
   #scalar_range_modifier: '\[\s*[a-zA-Z0-9_\-\+%]+\s*\.\.\s*[a-zA-Z0-9_\-\+%]+\s*\]'
@@ -803,36 +804,9 @@ contexts:
       scope: punctuation.section.constraint.end.specman
       pop: true
 
-  #TODO: debug or just add keywords and delegate to code-block
   struct-allocation:
-    - match: (?=\bnew\b)
-      push: struct-allocation-def
-
-  struct-allocation-def:
-    - meta_content_scope: meta.function-call.new.specman
-    #- match: (?!\bwith\b)
-    #  pop: true
-    - match: (\bnew\s+\bwith\b)\s*(\{)
-      captures:
-        1: keyword.other.new.specman
-        2: punctuation.section.block.begin.specman
-      set:
-        - include: actions
-        - match: (\})\s*(;)?
-          captures:
-            1: punctuation.section.block.end.specman
-            2: punctuation.terminator.specman
-          pop: true
-    #- match: (?:{{valid_type}})\s*(\(\s*{{valid_name}}\s*\))?
-    #  captures:
-    #    1: storage.type.specman
-    #    2: variable.other.specman
-    #  pop: true
     - match: \bnew\b
-      scope: keyword.other.new.specman
-    - match: ;
-      scope: punctuation.terminator.specman
-      pop: true
+      scope: meta.function-call.new.specman keyword.other.new.specman
 
   built-in-variables:
     - match: \b({{built_in_variables}})\b
