@@ -37,7 +37,7 @@ extend sys {
         };
 
         var l: list of int = {1;2;7;4}.sort();
-        l = l.reverse(); -- TODO: DEBUG
+        l = l.reverse();
 
         bar();
         compute foo();
@@ -59,7 +59,6 @@ extend sys {
 
         };
 
-        -- TODO: DEBUG
         msg = appendf("%s] triggered by %s", msg, str_join(source_events.apply(.to_string()), " and "));
     };
 
