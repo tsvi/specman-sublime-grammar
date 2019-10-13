@@ -20,12 +20,12 @@ scope: source.specman
 hidden: true
 
 variables:
-  scalar_types: int|uint|longint|longuint|bit|nibble|byte|time|bool
+  scalar_types: int|uint|longint|longuint|bit|nibble|byte|time|bool|numeric
   built_in_types: ({{scalar_types}}|string|real|set|untyped|rdv_semaphore|semaphore|locker|external_pointer|any_buffer_port)
   built_in_constants: TRUE|FALSE|NULL|UNDEF|MAX_INT|MIN_INT|MAX_LONGINT|MIN_LONGINT|MAX_UINT|MAX_LONGUINT
 
   # Tags in comment.line that will be highlighted
-  comment_tags: 'TODO:?|DEBUG:?'
+  comment_tags: 'TODO:?|DEBUG:?|FIXME:?|BAUSTELLE:?|TBD:?'
 
   # Pre-defined functions
   string_functions: hex|dec|bin|quote|str_chop|str_empty|str_exactly|str_insensitive|str_join|str_len|str_lower|str_match|str_pad|str_replace|str_split|str_split_all|str_sub|str_upper
@@ -57,7 +57,7 @@ variables:
   scalar_range_modifier: '\[\s*\S+\s*\.\.\s*\S+\s*\]'
   scalar_width_modifier: \(\s*(?:bits|bytes)\s*:\s*[\d\*]+\s*\)
   # Valid name that can also be a hierarchical reference
-  valid_name: ([a-zA-Z](?:[a-zA-Z0-9_.]+)?(?<!{{invalid_names}}))
+  valid_name: ([a-zA-Z](?:[a-zA-Z0-9_.:]+)?(?<!{{invalid_names}}))
   # Simple valid identifier
   valid_id: ([a-zA-Z](?:[a-zA-Z0-9_]+)?(?<!{{invalid_names}}))
   # Valid identifier that includes ' for things like TRUE'has_checker; no negative look-ahead because we use it in repetition
@@ -86,6 +86,7 @@ contexts:
     - include: preprocessor
     - include: structs
     - include: macros
+    - include: templates
     - include: code
 
   # Include comments in all scopes (except strings)
@@ -97,6 +98,7 @@ contexts:
     - meta_content_scope: meta.class.body.specman
     # TODO: make base-grammar out of the first scopes here
     - include: literals
+    - include: template-params
     - include: operators
     - include: built-in-variables
     - include: type-casting
@@ -116,6 +118,7 @@ contexts:
   actions:
     - meta_content_scope: meta.actions.specman
     - include: literals
+    - include: template-params
     - include: operators
     - include: built-in-variables
     - include: type-casting
@@ -184,7 +187,6 @@ contexts:
   comment-contents:
     - meta_scope: comment.line.specman
     - meta_include_prototype: false
-    # Highlight TODO in comments
     - match: \b{{comment_tags}}
       scope: invalid
     - match: \n
@@ -555,14 +557,15 @@ contexts:
       # TODO: push onto stack and parse macro definition for define-as and define-as-computed
 
   # 3.2.1 Structs
-  # TODO: add template, or at least prevent template breaking this
   # TODO: implementing <interface1>, <interface2>
   structs:
-    - match: (?=^\s*struct\s+{{valid_id}}(?:\s+(like)\s+{{valid_id}})?\s*\{)
+    - match: (?=^\s*(?:struct|unit)\s+{{valid_id}}(?:\s+(like)\s+{{valid_id}})?\s*(?:implementing\s+{{valid_id}}(?:\s*(,)\s*{{valid_id}})*)?\s*\{)
       push: struct-declaration
-    - match: (?=^\s*unit\s+{{valid_id}}(?:\s+(like)\s+{{valid_id}})?\s*\{)
+    #- match: (?=^\s*unit\s+{{valid_id}}(?:\s+(like)\s+{{valid_id}})?\s*\{)
+    #  push: struct-declaration
+    - match: (?=^\s*extend(?:\s+{{valid_determinant}}\s*)+\s+(?:{{valid_id}}\s*)?\{)
       push: struct-declaration
-    - match: (?=^\s*extend(?:\s+{{valid_determinant}}\s*)+\s*\{)
+    - match: (?=^(?:package\s*)?interface\s+{{valid_id}}(?:\s+like\s+)?)
       push: struct-declaration
 
   when-inheritance:
@@ -571,13 +574,16 @@ contexts:
 
   struct-declaration:
     - meta_scope: meta.class.declaration.specman
-    - match: \b(struct|unit)\s+{{valid_id}}(?:\s+(like)\s+{{valid_id}})?\s*(\{)
+    - match: \b(struct|unit)\s+{{valid_id}}(?:\s+(like)\s+{{valid_id}})?\s*(?:(implementing)\s+{{valid_id}}(?:\s*,\s*{{valid_id}})*)?\s*(\{)
       captures:
         1: keyword.declaration.class.specman
         2: entity.name.class.specman
         3: keyword.declaration.like.specman
         4: entity.other.inherited-class.specman
-        5: punctuation.section.class.begin.specman
+        5: keyword.declaration.interface.specman
+        6: storage.type.interface.specman
+        7: storage.type.interface.specman
+        8: punctuation.section.class.begin.specman
       set:
         - meta_content_scope: meta.class.body.specman
         - match: (\})\s*(;)
@@ -587,7 +593,22 @@ contexts:
             2: punctuation.terminator.specman
         - include: code
 
-    - match: (\bextend|when)(?:\s+{{valid_determinant}}\s*)+\s*(\{)
+    - match: (\bextend)(?:\s+{{valid_determinant}}\s*)+\s*(?:{{valid_id}}\s*)?(\{)
+      captures:
+        1: keyword.declaration.class.specman
+        2: entity.name.class.specman
+        3: entity.name.class.specman
+        4: punctuation.section.class.begin.specman
+      set:
+        - meta_content_scope: meta.class.body.specman
+        - match: (\})\s*(;)
+          pop: true
+          captures:
+            1: punctuation.section.class.end.specman
+            2: punctuation.terminator.specman
+        - include: code
+
+    - match: (\bwhen)(?:\s+{{valid_determinant}}\s*)+\s*(\{)
       captures:
         1: keyword.declaration.class.specman
         2: entity.name.class.specman
@@ -600,6 +621,59 @@ contexts:
             1: punctuation.section.class.end.specman
             2: punctuation.terminator.specman
         - include: code
+
+    - match: (\bpackage\s*)?(\binterface)(?:\s+{{valid_id}})(?:\s+(like)\s+{{valid_id}}(?:\s*,\s*{{valid_id}})*)?\s*(\{)
+      captures:
+        1: entity.name.namespace.specman
+        2: keyword.declaration.interface.specman
+        3: entity.name.interface.specman
+        4: keyword.declaration.like.specman
+        5: storage.type.interface.specman
+        6: storage.type.interface.specman
+        7: punctuation.section.interface.begin.specman
+      set:
+        - meta_content_scope: meta.interface.body.specman
+        - match: (\})\s*(;)
+          pop: true
+          captures:
+            1: punctuation.section.interface.end.specman
+            2: punctuation.terminator.specman
+        - include: code
+
+  # 5. Template Types
+  # TODO: 5.3 template instance
+  templates:
+    - match: (?=^\s*(?:package\s+)?template\s+(?:extend\s+)?\b(?:struct|unit|interface|numeric_type)\b)
+      push: template-declaration
+
+  template-declaration:
+    - meta_scope: meta.class.declaration.template.specman
+    - match: (package\s+)?(template)\s+(extend\s+)?\b(struct|unit|interface)\b\s+(?:{{valid_id}}\s+)\bof\b\s+
+      captures:
+        1: entity.name.namespace.specman
+        2: keyword.declaration.template.specman
+        3: keyword.declaration.specman
+        4: keyword.declaration.class.specman
+        5: entity.name.class.template.specman
+      pop: true
+
+  template-params:
+    - match: (<)\s*(?:{{valid_id}}\s*)\'\s*\b(type|exp)(>\s*)(:\s*)({{scalar_types}})
+      captures:
+        1: punctuation.separator.specman
+        2: variable.parameter.template.specman
+        3: keyword.declaration.specman
+        4: punctuation.separator.specman
+        5: punctuation.separator.specman
+        6: storage.type.specman
+    - match: (<)\s*(?:{{valid_id}}\s*)\'\s*\b(type|exp)(>\s*)(?:(:\s*)(struct|interface|object|list|scalar|numeric|custom_numeric|enum|port))?
+      captures:
+        1: punctuation.separator.specman
+        2: variable.parameter.template.specman
+        3: keyword.declaration.specman
+        4: punctuation.separator.specman
+        5: punctuation.separator.specman
+        6: storage.type.category.specman
 
   member-declaration:
     # 3.5 Defining Fields
@@ -619,12 +693,12 @@ contexts:
         6: storage.type.specman
 
     # Match most field members
-    - match: '({{struct_access}}\s+)?(static\s+)?(const\s+)?(!\s*)?(%\s*)?(?:{{valid_id}}\s*)(:)(?:\s*{{valid_type_no_modifier}}\s*)(;|=)'
+    - match: '({{struct_access}}\s+)?(static\s+)?(const\s+)?(!|~\s*)?(%\s*)?(?:{{valid_id}}\s*)(:)(?:\s*{{valid_type_no_modifier}}\s*)(;|=)'
       captures:
         1: storage.modifier.access.specman
         2: storage.modifier.static.specman
         3: storage.modifier.const.specman
-        4: punctuation.definition.variable.ungenerated.specman
+        4: punctuation.definition.variable.generation.specman
         5: punctuation.definition.variable.physical.specman
         6: variable.other.member.specman
         7: punctuation.separator.type.specman
@@ -634,12 +708,12 @@ contexts:
         9: punctuation.terminator.specman
 
     # Match scalar field members if not matched above (no semicolon because valid_scalar_type contains lookahead)
-    - match: '({{struct_access}}\s+)?(static\s+)?(const\s+)?(!\s*)?(%\s*)?(?:{{valid_id}}\s*)(:)(?:\s*{{valid_scalar_type}}\s*)'
+    - match: '({{struct_access}}\s+)?(static\s+)?(const\s+)?(!|~\s*)?(%\s*)?(?:{{valid_id}}\s*)(:)(?:\s*{{valid_scalar_type}}\s*)'
       captures:
         1: storage.modifier.access.specman
         2: storage.modifier.static.specman
         3: storage.modifier.const.specman
-        4: punctuation.definition.variable.ungenerated.specman
+        4: punctuation.definition.variable.generation.specman
         5: punctuation.definition.variable.physical.specman
         6: variable.other.member.specman
         7: punctuation.separator.type.specman
@@ -649,12 +723,12 @@ contexts:
         # 9: punctuation.terminator.specman
 
     # Struct/unit member
-    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?(!\s*)?(%\s*)?(?:{{valid_id}}\s*)(\:)\s*(?:{{valid_struct_type}})\s*(\bis\s+instance\b)?\s*(;|=)
+    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?(!|~\s*)?(%\s*)?(?:{{valid_id}}\s*)(\:)\s*(?:{{valid_struct_type}})\s*(\bis\s+instance\b)?\s*(;|=)
       captures:
         1: storage.modifier.access.specman
         2: storage.modifier.static.specman
         3: storage.modifier.const.specman
-        4: punctuation.definition.variable.ungenerated.specman
+        4: punctuation.definition.variable.generation.specman
         5: punctuation.definition.variable.physical.specman
         6: variable.other.member.specman
         7: punctuation.separator.type.specman
@@ -663,12 +737,12 @@ contexts:
         10: punctuation.terminator.specman
 
     # Enum member
-    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?(!\s*)?(%\s*)?(?:{{valid_id}}\s*)(\:)\s*(\[\s*)
+    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?(!|~\s*)?(%\s*)?(?:{{valid_id}}\s*)(\:)\s*(\[\s*)
       captures:
         1: storage.modifier.access.specman
         2: storage.modifier.static.specman
         3: storage.modifier.const.specman
-        4: punctuation.definition.variable.ungenerated.specman
+        4: punctuation.definition.variable.generation.specman
         5: punctuation.definition.variable.physical.specman
         6: variable.other.member.enum.specman
         7: punctutation.separator.type.specman
@@ -870,7 +944,7 @@ contexts:
 
   default-scopes:
     - scope: keyword.other.specman
-      match: \b(soft|like|compute|start)\b
+      match: \b(soft|compute|start)\b
 
     - scope: keyword.other.new.specman
       match: \bnew\b
@@ -882,7 +956,7 @@ contexts:
       match: \b(dut_error|initialize|delayed|exit|finish|post_generate|pre_generate|setup|setup_test|finalize_test|extract_test|init|run|copy|set_config|quit|lock|unlock|release|swap|quit|value|stop_run|get_config|get_indices|exec|pack|unpack)\b
 
     - scope: keyword.control.specman
-      match: \b(until|repeat|while|for|from|to|step|each|do|break|continue|before|next|sequence|always|in|return)\b
+      match: \b(until|repeat|while|for|from|to|step|each|do|break|continue|before|next|always|in|return)\b
 
     - scope: keyword.other.packing.specman
       match: \b(packing|low|high|network)\b
@@ -912,7 +986,10 @@ contexts:
       match: \b(initial|idle|others|posedge|clock|cycles)\b
 
     - scope: storage.modifier.specman
-      match: \b(is\s+instance|list\s+of|attribute)\b
+      match: \b(is\s+instance|list\s+of|attribute|::)\b
+
+    - scope: keyword.declaration.specman
+      match: \b(like|implementing|conditions|sequence)\b
 
     - scope: punctuation.terminator.specman
       match: \s*;

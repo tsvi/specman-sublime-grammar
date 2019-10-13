@@ -37,7 +37,7 @@ unit foo_u {
 };
 
 extend b'TRUE BLUE foo_u {
-   keep s_p.hdl_path() == "~TB.dut.sub.p"; -- TODO: DEBUG
+   keep s_p.hdl_path() == "~TB.dut.sub.p";
 };
 
 
