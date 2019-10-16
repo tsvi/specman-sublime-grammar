@@ -22,10 +22,6 @@ template interface foo_if of (<data'exp>:uint = 1000) like base_if, advanced_if 
 
 };
 
-// =============================================================================
-// Define a flat environment unit w/o agents. Can be used to build different
-// topologies (e.g. with lists of agents).
-
 unit singleagent_flat_env_u like imc_base_env_u {
    static kind: env_kind_t = FLAT;
    // Environment configuration
@@ -58,23 +54,9 @@ struct uses_foo_s implementing foo_if, third_if {
 
 };
 
-//=============================================================================
-// Item type
-//=============================================================================
-
 struct singleagent_data_item_s like imc_base_data_item_s {};
 
-
-//=============================================================================
-// Portmap unit
-//=============================================================================
-
 unit singleagent_port_map_u like imc_base_port_map_u implementing advance_if {};
-
-
-//=============================================================================
-// Monitor unit
-//=============================================================================
 
 unit singleagent_monitor_u
    like imc_base_monitor_u of (singleagent_data_item_s) {
@@ -101,18 +83,8 @@ unit singleagent_monitor_u
    };
 };
 
-
-//=============================================================================
-// Instantiate UVM-e compliant env and agent config units (using UVM macros).
-//=============================================================================
-
 uvm_build_config env singleagent_flat_env_u singleagent_env_config_u singleagent_env_config_params_s ;
 uvm_build_config agent singleagent_agent_u singleagent_agent_config_u singleagent_agent_config_params_s ;
-
-
-//=============================================================================
-// Define the sequence infrastructure.
-//=============================================================================
 
 sequence singleagent_sequence_s
    using testflow = TRUE,

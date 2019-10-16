@@ -22,6 +22,9 @@ extend sys {
 
     my_e_import(i:int,s:string):int is import DPI-C sv_impl;
 
+    //fn_multi_line(a: bool,
+    //              b: int):bool is empty;
+
     run() is also {
         var a: int = 0;
         var e1: [a,b,c];
@@ -38,6 +41,10 @@ extend sys {
 
         var l: list of int = {1;2;7;4}.sort();
         l = l.reverse();
+
+        for each (elem) using index (idx) in l {
+          print elem, idx;
+        };
 
         bar();
         compute foo();
@@ -56,7 +63,7 @@ extend sys {
         p = new colors_s;
 
         if p is a GREEN color_s (green) {
-
+          print p;
         };
 
         msg = appendf("%s] triggered by %s", msg, str_join(source_events.apply(.to_string()), " and "));

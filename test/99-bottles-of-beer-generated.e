@@ -1,11 +1,12 @@
 
-Bla : This is comment
+This is comment
 extend sys
 for each in bla {
 
 }
 
 <'
+
 // 99 Bottles of beer
 // By Thorsten Dworzak
 
