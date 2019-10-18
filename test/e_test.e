@@ -85,6 +85,15 @@ extend sys {
           break;
       };
     };
+
+    walk_objections(unt: any_unit, obj_kind: objection_kind) is {
+      if unt.get_objection_counter(obj_kind) > 0 {
+         outf("Still pending objections in unit %s: %d\n", unt, unt.get_objection_counter(obj_kind));
+      };
+      for each (u) in unt.get_objection_list(obj_kind) {
+         walk_objections(u, obj_kind);
+      };
+   };
 };
 
 extend bla: [BLACK];
