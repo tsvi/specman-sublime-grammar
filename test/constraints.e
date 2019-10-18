@@ -23,6 +23,8 @@ bla
       keep soft lst == {q;w;e;r;t}.sort();
       keep soft lst_elem in {a;b};
 
+      keep lst2d == {matrix; {1;2;3}};
+
       keep soft for each (bla) using index (i) in lst {
          x.reset_soft();
          it == read_only(me.x/2); -- comment

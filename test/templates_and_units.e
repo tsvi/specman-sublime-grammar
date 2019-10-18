@@ -58,8 +58,7 @@ struct singleagent_data_item_s like imc_base_data_item_s {};
 
 unit singleagent_port_map_u like imc_base_port_map_u implementing advance_if {};
 
-unit singleagent_monitor_u
-   like imc_base_monitor_u of (singleagent_data_item_s) {
+unit singleagent_monitor_u like imc_base_monitor_u of (singleagent_data_item_s) {
    // Per default, use the type defined above.
 
    // Topology pointers

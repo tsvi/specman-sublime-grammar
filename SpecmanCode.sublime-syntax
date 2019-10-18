@@ -21,7 +21,7 @@ hidden: true
 
 variables:
   scalar_types: int|uint|longint|longuint|bit|nibble|byte|time|bool|numeric
-  built_in_types: ({{scalar_types}}|string|real|set|untyped|rdv_semaphore|semaphore|locker|external_pointer|any_buffer_port)
+  built_in_types: ({{scalar_types}}|string|real|set|untyped|rdv_semaphore|semaphore|locker|external_pointer|any_buffer_port|any_unit|any_struct)
   built_in_constants: TRUE|FALSE|NULL|UNDEF|MAX_INT|MIN_INT|MAX_LONGINT|MIN_LONGINT|MAX_UINT|MAX_LONGUINT
 
   # Tags in comment.line that will be highlighted
@@ -47,7 +47,7 @@ variables:
   # The following should include all keywords which are invalid as a user defined name
   # Note; the keywords should be enclosed with \b but this is not supported in negative-look-behind in ST3 Build < 3200
   built_in_variables: it|me|index|result
-  invalid_names: keep| if| if|static|const|{{struct_access}}|{{built_in_variables}}
+  invalid_names: keep| if| if|static|const|{{struct_access}}
 
   # Re-usable patterns
   singletons: sys|global|utils|message_manager|tf_domain_manager  # TODO: add more
@@ -62,11 +62,11 @@ variables:
   valid_id: ([a-zA-Z](?:[a-zA-Z0-9_]+)?(?<!{{invalid_names}}))
   # Valid identifier that includes ' for things like TRUE'has_checker; no negative look-ahead because we use it in repetition
   valid_determinant: ([a-zA-Z](?:[a-zA-Z0-9_\']+)?)
-  #valid_type: (?:list\s+of\s+)*(?:{{valid_id}}\s*)({{scalar_range_modifier}})?\s*({{scalar_width_modifier}})?
-  valid_type: (?:list\s+of\s+)*(?:{{valid_id}}\s*)(?=(?:{{scalar_range_modifier}})?\s*(?:{{scalar_width_modifier}})?)
-  valid_type_no_modifier: (?:list\s+of\s+)*(?:{{valid_id}}\s*)
-  valid_struct_type: (?:list\s+of\s+)*(?:\s+{{valid_determinant}}\s*)+
-  valid_scalar_type: (?:list\s+of\s+)*\b({{scalar_types}})(?=(?:{{scalar_range_modifier}})?\s*(?:{{scalar_width_modifier}})?)
+  valid_list_decl: (?:list(?:\s*\(\s*key\s*\:\s*[a-zA-Z](?:[a-zA-Z0-9_]*\s*\)))?\s+of\s+)
+  valid_type: (?:{{valid_list_decl}})*(?:{{valid_id}}\s*)(?=(?:{{scalar_range_modifier}})?\s*(?:{{scalar_width_modifier}})?)
+  valid_type_no_modifier: (?:{{valid_list_decl}})*(?:{{valid_id}}\s*)
+  valid_struct_type: (?:{{valid_list_decl}})*(?:\s+{{valid_determinant}}\s*)+
+  valid_scalar_type: (?:{{valid_list_decl}})*\b({{scalar_types}})(?=(?:{{scalar_range_modifier}})?\s*(?:{{scalar_width_modifier}})?)
 
 contexts:
 
@@ -339,21 +339,19 @@ contexts:
               pop: true
             - include: literals
             - include: operators
-        - match: (\))\s*(;)?
+        - match: (\))
           pop: true
           captures:
             1: punctuation.section.parens.end.specman
-            2: punctuation.terminator.specman
         - match: (?:\b{{valid_type_no_modifier}}\b)
           scope: storage.type.specman
         - include: literals
         - include: operators
 
-    - match: (\bis\s+(\bnot\b)?\s*a)(?:\s+{{valid_determinant}})+
+    - match: (\bis\s+(?:\bnot\b)?\s*a)(?:\s+{{valid_determinant}})+
       captures:
         1: keyword.other.type-casting.specman
-        2: keyword.other.type-casting.specman
-        3: storage.type.specman
+        2: storage.type.specman
 
   # 2.7 Defining and extending scalar types
   scalar-type-definition:
@@ -383,7 +381,6 @@ contexts:
         1: punctuation.separator.specman
         2: constant.other.enum.specman
         3: keyword.operator.assignment.specman
-    #- match: '(\]\s*)({{scalar_width_modifier}})?(\s*;)?'
     - match: '(\]\s*)(?={{scalar_width_modifier}})?'
       captures:
         1: punctuation.brackets.end.specman
@@ -567,7 +564,7 @@ contexts:
 
   # 3.2.1 Structs
   structs:
-    - match: (?=^\s*(?:struct|unit)\s+{{valid_id}}(?:\s+(like)\s+{{valid_id}})?\s*(?:implementing\s+{{valid_id}}(?:\s*(,)\s*{{valid_id}})*)?\s*\{)
+    - match: (?=^\s*(?:struct|unit)\s+{{valid_id}}(?:\s+(like)\s+{{valid_id}})?\s*(?:of\s+\(\s*{{valid_id}}\s*\))?\s*(?:implementing\s+{{valid_id}}(?:\s*(,)\s*{{valid_id}})*)?\s*\{)
       push: struct-declaration
     - match: (?=^\s*extend(?:\s+{{valid_determinant}}\s*)+\s+(?:{{valid_id}}\s*)?\{)
       push: struct-declaration
@@ -580,16 +577,17 @@ contexts:
 
   struct-declaration:
     - meta_scope: meta.class.declaration.specman
-    - match: \b(struct|unit)\s+{{valid_id}}(?:\s+(like)\s+{{valid_id}})?\s*(?:(implementing)\s+{{valid_id}}(?:\s*,\s*{{valid_id}})*)?\s*(\{)
+    - match: \b(struct|unit)\s+{{valid_id}}(?:\s+(like)\s+{{valid_id}})?\s*(?:of\s+\(\s*{{valid_id}}\s*\))?\s*(?:(implementing)\s+{{valid_id}}(?:\s*,\s*{{valid_id}})*)?\s*(\{)
       captures:
         1: keyword.declaration.class.specman
         2: entity.name.class.specman
         3: keyword.declaration.like.specman
         4: entity.other.inherited-class.specman
-        5: keyword.declaration.interface.specman
-        6: storage.type.interface.specman
+        5: entity.other.template.specman
+        6: keyword.declaration.interface.specman
         7: storage.type.interface.specman
-        8: punctuation.section.class.begin.specman
+        8: storage.type.interface.specman
+        9: punctuation.section.class.begin.specman
       set:
         - meta_content_scope: meta.class.body.specman
         - match: (\})\s*(;)
@@ -632,7 +630,6 @@ contexts:
         - include: code
 
   # 5. Template Types
-  # TODO: 5.3 template instance
   templates:
     - match: (?=^\s*(?:package\s+)?template\s+(?:extend\s+)?\b(?:struct|unit|interface|numeric_type)\b)
       push: template-declaration
@@ -675,8 +672,7 @@ contexts:
 
   member-declaration:
     # 3.5 Defining Fields
-    # TODO: keyed lists (\[\s*[0-9A-Za-z_]+\s*\]\s*)*
-    # TODO: interfaces
+    # TODO: 5.3 template instance (for now only unit/struct ... of is supported)
     # Match type with optional scalar modifiers
     # Setting initial values with = we handle simply by terminating the match-expression
 
@@ -833,7 +829,9 @@ contexts:
       push: constraint-expression
 
   constraint-expression:
+    - meta_scope: meta.constraint-expression.specman
     - include: priority-scopes
+    - include: list-literals
     - match: ;
       scope: punctuation.terminator.specman
       pop: true
@@ -905,6 +903,22 @@ contexts:
           captures:
             1: punctuation.section.block.end.specman
             2: punctuation.terminator.specman
+          pop: true
+
+  # This should not be included together with code-blocks, matches list-lterals in selected contexts
+  list-literals:
+    - match: (\{)
+      captures:
+        1: punctuation.section.list-literal.begin.specman
+      push:
+        - meta_content_scope: meta.list-literal.specman
+        - include: priority-scopes
+        - include: list-literals
+        - match: (;)
+          scope: punctuation.separator.specman
+        - match: (\})\s*
+          captures:
+            1: punctuation.section.list-literal.end.specman
           pop: true
 
   preprocessor:

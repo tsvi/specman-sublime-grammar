@@ -25,6 +25,7 @@ extend sys {
     //fn_multi_line(a: bool,
     //              b: int):bool is empty;
 
+
     run() is also {
         var a: int = 0;
         var e1: [a,b,c];
@@ -34,10 +35,17 @@ extend sys {
         out(b.l1.apply(it > 0x7f ? 1 : 0));
         var s: string := l1.apply(it > 127 ? 1'b1 : 1'b0);
 
+        var matrix: list of list of int = {{1;2;3};{4;5;6}};
+        var matix_3d: list of list of list of int = {matrix;{6;7;8};{9;10;11}};
+
+        var cl: list of list(key: it) of uint(bits: 4);
+
         assert a==0;
         first of {
             start foo(a+b);
         };
+
+        do sequence;
 
         var l: list of int = {1;2;7;4}.sort();
         l = l.reverse();
@@ -69,6 +77,8 @@ extend sys {
         msg = appendf("%s] triggered by %s", msg, str_join(source_events.apply(.to_string()), " and "));
     };
 
+    l: list(key: string) of uint;
+    ll: list of list(key: it) of uint(bits: 4);
     const member1: uint(bits:23);
     member2: list of list of my_struct_s;
 
