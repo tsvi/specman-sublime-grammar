@@ -209,23 +209,17 @@ contexts:
     - match: \b((?:\d+)(')(?:[oO])[0-7]([0-7xXzZuUlLhHwWnN_]+)?)\b
       captures:
         1: constant.numeric.mvl.octal.specman
-        # 2: storage.modifier.constant.size.specman
         2: punctuation.separator.literal.specman
-        # 4: storage.modifier.constant.type.specman
 
     - match: \b((?:\d+)(')(?:[hHxX])[0-9a-fA-F]([0-9a-fA-FxXzZuUlLhHwWnN_]+)?)\b
       captures:
         1: constant.numeric.mvl.hex.specman
-        # 2: storage.modifier.constant.size.specman
         2: punctuation.separator.literal.specman
-        #4: storage.modifier.constant.type.specman
 
     - match: \b((?:\d+)(')(?:[bB])[0-1]([0-1xXzZuUlLhHwWnN_]+)?)\b
       captures:
         1: constant.numeric.mvl.binary.specman
-        # 2: storage.modifier.constant.size.specman
         2: punctuation.separator.literal.specman
-        # 4: storage.modifier.constant.type.specman
 
     # 1.1.4.1 Unsized numbers
     - match: \b(-?([0-9_]+[kKmM]?))\b
@@ -244,36 +238,27 @@ contexts:
     - match: \b(0(?:[oO])\s*[0-9a-fA-F_xXzZ?]+)\b
       captures:
         1: constant.numeric.unsized.octal.specman
-        # 2: storage.modifier.constant.type.specman
 
     # 1.1.4.2 Sized numbers
     - match: \b((?:\d+)?(')(?:[dD])\s*[0-9_]+)\b
       captures:
         1: constant.numeric.sized.integer.specman
-        #2: storage.modifier.constant.size.specman
         2: punctuation.separator.literal.specman
-        #4: storage.modifier.constant.type.specman
 
     - match: \b((?:\d+)?(')(?:[bB])\s*[0-1_]+)\b
       captures:
         1: constant.numeric.sized.binary.specman
-        #2: storage.modifier.constant.size.specman
         2: punctuation.separator.literal.specman
-        #4: storage.modifier.constant.type.specman
 
     - match: \b((?:\d+)?(')(?:[hHxX])\s*[0-9a-fA-F_]+)\b
       captures:
         1: constant.numeric.sized.hex.specman
-        # 2: storage.modifier.constant.size.specman
         2: punctuation.separator.literal.specman
-        # 4: storage.modifier.constant.type.specman
 
     - match: \b((?:\d+)?(')(?:[oO])\s*[0-7_]+)\b
       captures:
         1: constant.numeric.sized.octal.specman
-        # 2: storage.modifier.constant.size.specman
         2: punctuation.separator.literal.specman
-        # 4: storage.modifier.constant.type.specman
 
     # 1.1.4.4 Predefined constants
     - match: \b({{built_in_constants}})\b
@@ -319,8 +304,6 @@ contexts:
     - match: \s*(?:\b{{valid_scalar_type}})\b
       captures:
         1: storage.type.specman
-        # 2: storage.modifier.specman
-        # 3: storage.modifier.specman
 
   type-casting:
     - match: \.(as_a)\s*(\()
@@ -360,8 +343,6 @@ contexts:
         1: keyword.declaration.specman
         2: storage.type.specman
         3: storage.type.specman
-        #4: storage.modifier.specman
-        #5: storage.modifier.specman
         4: punctuation.terminator.specman
     # start of (multi-line) enum declaration
     - match: '\b(type|extend)\b\s+{{valid_id}}\s*:\s*(\[\s*)'
@@ -384,8 +365,6 @@ contexts:
     - match: '(\]\s*)(?={{scalar_width_modifier}})?'
       captures:
         1: punctuation.brackets.end.specman
-        #2: storage.modifier.specman
-        #3: punctuation.terminator.specman
       pop: true
     - include: literals
     - include: operators
@@ -484,8 +463,6 @@ contexts:
         2: punctuation.separator.parameter.specman
         3: punctuation.accessor.parameter.specman
         4: storage.type.specman
-        #5: storage.modifier.specman
-        #6: storage.modifier.specman
     - match: ','
       scope: punctuation.separator.parameter.specman
     # This captures some declarative constructs that look like function calls, e.g. verifier.e_impl()
@@ -505,8 +482,6 @@ contexts:
       captures:
         1: punctuation.separator.return-type.specman
         2: meta.method.return-type.specman storage.type.specman
-        #3: storage.modifier.specman
-        #4: storage.modifier.specman
     - match: (\@){{valid_id}}
       captures:
         1: punctuation.accessor.event.specman
@@ -540,8 +515,6 @@ contexts:
         1: keyword.declaration.specman
         2: variable.other.specman
         3: storage.type.specman
-        #4: storage.modifier.specman
-        #5: storage.modifier.specman
     - match: '(\bvar\b)\s*(?:{{valid_id}}\s*):\s*(\[\s*)'
       captures:
         1: keyword.declaration.specman
@@ -698,8 +671,6 @@ contexts:
         6: variable.other.member.specman
         7: punctuation.separator.type.specman
         8: storage.type.specman
-        #9: storage.modifier.specman
-        #10: storage.modifier.specman
         9: punctuation.terminator.specman
 
     # Match scalar field members if not matched above (no semicolon because valid_scalar_type contains lookahead)
@@ -713,9 +684,6 @@ contexts:
         6: variable.other.member.specman
         7: punctuation.separator.type.specman
         8: storage.type.specman
-        #9: storage.modifier.specman
-        #10: storage.modifier.specman
-        # 9: punctuation.terminator.specman
 
     # Struct/unit member
     - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?(!|~\s*)?(%\s*)?(?:{{valid_id}}\s*)(\:)\s*(?:{{valid_struct_type}})\s*(\bis\s+instance\b)?\s*(;|=)
