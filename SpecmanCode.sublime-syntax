@@ -3,25 +3,23 @@
 name: SpecmanCode
 
 # The e-syntax hierarchy roughly corresponds to the level of indentation shown below:
-#
 # statements
 #     struct members
 #         actions
 #             expressions
 # This is not fully mapped here, to avoid too deep nesting of scopes and also
 # because e.g. expressions can be used in struct memebers
-#
 # There is a rich set of support functions in the e-language and it is also
 # still undergoing evolution, so not all constructs might be supported ATM.
-#
 # Note: Numbered comments refer to chapters in the Specman e Language reference
+# See also: https://www.sublimetext.com/docs/3/syntax.html and https://www.sublimetext.com/docs/3/scope_naming.html
 
 scope: source.specman
 hidden: true
 
 variables:
   scalar_types: int|uint|longint|longuint|bit|nibble|byte|time|bool|numeric
-  built_in_types: ({{scalar_types}}|string|real|set|untyped|rdv_semaphore|semaphore|locker|external_pointer|any_buffer_port|any_unit|any_struct)
+  built_in_types: ({{scalar_types}}|string|real|set|untyped|rdv_semaphore|semaphore|locker|external_pointer|any_buffer_port|any_unit|any_struct|any_sequence|objection_kind)
   built_in_constants: TRUE|FALSE|NULL|UNDEF|MAX_INT|MIN_INT|MAX_LONGINT|MIN_LONGINT|MAX_UINT|MAX_LONGUINT
 
   # Tags in comment.line that will be highlighted
@@ -34,7 +32,7 @@ variables:
   bitwise_functions: bitwise_or|bitwise_nand|bitwise_xor|bitwise_nor|bitwise_xnor
   output_functions: messagef|message|appendf|append|dut_errorf|dut_error|out|outf
   unit_functions: get_unit|get_all_units|get_enclosing_unit|try_enclosing_unit|set_unit
-  built_in_functions: assert|warning|error|fatal|{{string_functions}}|{{arithmetic_functions}}|{{bitwise_functions}}|{{real_number_functions}}|{{output_functions}}|{{unit_functions}}|read_only|value|sn_unique_id_for_struct|deep_copy|deep_compare|deep_compare_physical|bitwise_and
+  built_in_functions: assert|warning|error|fatal|{{string_functions}}|{{arithmetic_functions}}|{{bitwise_functions}}|{{real_number_functions}}|{{output_functions}}|{{unit_functions}}|read_only|value|sn_unique_id_for_struct|deep_copy|deep_compare|deep_compare_physical|bitwise_and|range
 
   # Pre-defined functions that dont need parentheses
   built_in_functions_optional_parens: assert|print
@@ -50,7 +48,7 @@ variables:
   invalid_names: keep| if| if|static|const|{{struct_access}}
 
   # Re-usable patterns
-  singletons: sys|global|utils|message_manager|tf_domain_manager  # TODO: add more
+  singletons: sys|global|utils|message_manager|tf_domain_manager|rf_manager
   struct_access: package|protected|private
   concurrency_actions: first\s+of|all\s+of
   #scalar_range_modifier: '\[\s*[a-zA-Z0-9_\-\+%]+\s*\.\.\s*[a-zA-Z0-9_\-\+%]+\s*\]'
@@ -318,7 +316,7 @@ contexts:
       match: \@
 
   scalar-types:
-    - match: \s*(?:\b{{valid_scalar_type}})\s*
+    - match: \s*(?:\b{{valid_scalar_type}})\b
       captures:
         1: storage.type.specman
         # 2: storage.modifier.specman
@@ -347,7 +345,9 @@ contexts:
           scope: storage.type.specman
         - include: literals
         - include: operators
-
+      # type-constraint
+    - match: \btype\b
+      scope: keyword.other.constraint.specman
     - match: (\bis\s+(?:\bnot\b)?\s*a)(?:\s+{{valid_determinant}})+
       captures:
         1: keyword.other.type-casting.specman
@@ -465,8 +465,6 @@ contexts:
       push: method-declaration
 
   method-declaration:
-    - match: ^((?!is).)*$
-      pop: true
     - match: ({{struct_access}})?\s*(static\s+)?(final\s+)?\s*\b{{valid_id}}\b\s*(\()
       captures:
         1: storage.modifier.function.specman
@@ -475,6 +473,8 @@ contexts:
         4: meta.method.identifier.specman entity.name.function.specman
         5: meta.method.parameters.specman punctuation.section.parens.begin.specman
       set: method-parameters
+    - match: ^((?!is).)*$
+      pop: true
 
   method-parameters:
     - meta_content_scope: meta.method.parameters.specman
@@ -486,7 +486,7 @@ contexts:
         4: storage.type.specman
         #5: storage.modifier.specman
         #6: storage.modifier.specman
-    - match: (,)
+    - match: ','
       scope: punctuation.separator.parameter.specman
     # This captures some declarative constructs that look like function calls, e.g. verifier.e_impl()
     - match: \)\s*(;)
@@ -533,8 +533,9 @@ contexts:
           pop: true
 
   # 8.2 var
+  # includes cover item declaration
   variable-declaration:
-    - match: '(\bvar\b)\s*(?:{{valid_id}}\s*):\s*{{valid_type}}'
+    - match: '\b(var|item)\b\s*(?:{{valid_id}}\s*):\s*{{valid_type}}'
       captures:
         1: keyword.declaration.specman
         2: variable.other.specman
@@ -749,7 +750,6 @@ contexts:
   # for block-constraints
   constraint-def:
 
-    # TODO: Support type constraints
     - match: (\bkeep\b)\s+(?:\s*{{valid_name}})\.(reset_soft)
       captures:
         1: keyword.other.constraint.specman
@@ -946,32 +946,26 @@ contexts:
         - include: literals
         - include: operators
 
-#######
+####### these pick-up any remaining scopes not matched above
 
   default-scopes:
     - scope: keyword.other.specman
-      match: \b(soft|compute|start)\b
-
-    - scope: keyword.other.new.specman
-      match: \bnew\b
+      match: \b(soft|compute|start|new)\b
 
     - scope: keyword.other.statement.specman
       match: \b(keep|export|extend|template|on|event|expect|check|that|routine|specman|radix|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
 
     - scope: support.function.builtin.specman meta.function-call.builtin.specman
-      match: \b(dut_error|initialize|delayed|exit|finish|post_generate|pre_generate|setup|setup_test|finalize_test|extract_test|init|run|copy|set_config|quit|lock|unlock|release|swap|quit|value|stop_run|get_config|get_indices|exec|pack|unpack)\b
+      match: \b(initialize|delayed|exit|finish|post_generate|pre_generate|setup|setup_test|finalize_test|extract_test|init|run|copy|set_config|quit|lock|unlock|release|swap|quit|value|stop_run|get_config|get_indices|exec|pack|unpack)\b
 
     - scope: keyword.control.specman
-      match: \b(until|repeat|while|for|from|to|step|each|do|break|continue|before|next|always|in|return)\b
+      match: \b(until|repeat|while|for|from|to|step|each|do|break|continue|before|next|always|in|return|keeping)\b
 
     - scope: keyword.other.packing.specman
       match: \b(packing|low|high|network)\b
 
     - scope: keyword.conditional.specman
-      match: \b(choose|matches|if|then|else|try)\b
-
-    - scope: keyword.conditional.specman
-      match: \b(case|casex|casez|default)\b
+      match: \b(choose|matches|if|then|else|try|case|casex|casez|default)\b
 
     - scope: keyword.other.temporal.specman
       match: \b(cycle|sample|events|forever|wait|change|negedge|rise|fall|delay|sync|sim|true|detach|eventually|emit)\b
@@ -981,9 +975,6 @@ contexts:
 
     - scope: keyword.other.singleton.specman
       match: \b({{singletons}})\b
-
-    - scope: keyword.special.specman
-      match: \b(DPI-C|symtab|ECHO|DOECHO)\b
 
     - scope: keyword.other.file.specman
       match: \b(files|load|module|ntv|source_ref|script|read|write)\b
@@ -995,7 +986,7 @@ contexts:
       match: \b(is\s+instance|list\s+of|attribute|::)\b
 
     - scope: keyword.declaration.specman
-      match: \b(like|implementing|conditions|sequence|created_driver|created_kind|testflow|uvm_build_config)\b
+      match: \b(DPI-C|like|implementing|conditions|created_driver|created_kind|testflow|uvm_build_config)\b
 
     - scope: punctuation.terminator.specman
       match: \s*;

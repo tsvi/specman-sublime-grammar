@@ -45,7 +45,7 @@ extend sys {
             start foo(a+b);
         };
 
-        do sequence;
+        do sequence keeping { it == seq };
 
         var l: list of int = {1;2;7;4}.sort();
         l = l.reverse();
@@ -71,9 +71,11 @@ extend sys {
         p = new colors_s;
 
         if p is a GREEN color_s (green) {
+          type bla is a parent;
           print p;
         };
 
+        keep type p is a child;
         msg = appendf("%s] triggered by %s", msg, str_join(source_events.apply(.to_string()), " and "));
     };
 
@@ -104,6 +106,13 @@ extend sys {
          walk_objections(u, obj_kind);
       };
    };
+
+   multi_line_method_params (a: int,
+                             b: bool
+                             ) is {
+
+   };
+
 };
 
 extend bla: [BLACK];
