@@ -35,7 +35,7 @@ variables:
   built_in_functions: assert|warning|error|fatal|{{string_functions}}|{{arithmetic_functions}}|{{bitwise_functions}}|{{real_number_functions}}|{{output_functions}}|{{unit_functions}}|read_only|value|sn_unique_id_for_struct|deep_copy|deep_compare|deep_compare_physical|bitwise_and|range
 
   # Pre-defined functions that dont need parentheses
-  built_in_functions_optional_parens: assert|print
+  built_in_functions_optional_parens: assert|print|start
 
   # functions called member-function-style
   list_pseudo_methods: add|add0|clear|delete|fast_delete|insert|pop0|pop|push0|push|resize|all_different|apply|copy|count|exists|first|first_index|flatten|get_indices|has|is_a_permutation|is_empty|last|last_index|max|max_index|max_value|min|min_index|min_value|reverse|size|sort|sort_by_field|split|top0|top|unique|all|all_indices|and_all|or_all|average|product|sum|crc_8|crc_32|crc_32_flip|key|key_index|key_exists
@@ -378,7 +378,7 @@ contexts:
       push:
         - meta_scope: meta.function-call.builtin.specman
         - include: function-call-parameters
-    - match: (\b{{built_in_functions_optional_parens}}\b)
+    - match: (\b{{built_in_functions_optional_parens}}\b)(?=\s|\()
       captures:
         1: support.function.builtin.specman
       push:
@@ -918,7 +918,7 @@ contexts:
 
   default-scopes:
     - scope: keyword.other.specman
-      match: \b(soft|compute|start|new)\b
+      match: \b(soft|compute|new)\b
 
     - scope: keyword.other.statement.specman
       match: \b(keep|export|extend|template|on|event|expect|check|that|routine|specman|radix|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b

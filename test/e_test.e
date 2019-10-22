@@ -107,11 +107,15 @@ extend sys {
       };
    };
 
+   start multi_line_method_params(get_a(a), b);
+   assert (a == foo(x)); // DEBUG
+
    multi_line_method_params (a: int,
                              b: bool
                              ) is {
 
    };
+
 
 };
 
