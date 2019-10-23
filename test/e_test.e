@@ -8,6 +8,7 @@ export DPI-C verifier.e_impl();
 
 method_type str2uint_method_t (s: string):uint;
 method_type str2uint_method_t (s: string):uint @sys.any;
+method_type method_set_sharedlut_entry(u1: uint, u2: uint(bits: 24));
 
 
 type bla: [BLUE, GREEN, YELLOW](bits: 2);
@@ -107,11 +108,15 @@ extend sys {
       };
    };
 
-   multi_line_method_params (a: int,
+   start multi_line_method_params(get_a(a), b);
+   assert (a == foo(x)); // DEBUG
+
+   multi_line_method_params (a: int, // DEBUG
                              b: bool
                              ) is {
 
    };
+
 
 };
 
