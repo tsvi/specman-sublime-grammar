@@ -31,7 +31,7 @@ variables:
   real_number_functions: dist_uniform|dist_normal|rdist_uniform|rdist_normal
   bitwise_functions: bitwise_or|bitwise_nand|bitwise_xor|bitwise_nor|bitwise_xnor
   output_functions: messagef|message|appendf|append|dut_errorf|dut_error|out|outf
-  unit_functions: get_unit|get_all_units|get_enclosing_unit|try_enclosing_unit|set_unit
+  unit_functions: get_unit|get_all_units|get_enclosing_unit|try_enclosing_unit|set_unit|agent_code|agent|hdl_path
   built_in_functions: assert|warning|error|fatal|{{string_functions}}|{{arithmetic_functions}}|{{bitwise_functions}}|{{real_number_functions}}|{{output_functions}}|{{unit_functions}}|read_only|value|sn_unique_id_for_struct|deep_copy|deep_compare|deep_compare_physical|bitwise_and|range
 
   # Pre-defined functions that dont need parentheses
@@ -902,17 +902,15 @@ contexts:
         pop: true
       - include: code
     # Method-type declaration
-    - match: (\bmethod_type\b)\s+\b{{valid_id}}\b\s*(\()
+    - match: (\bmethod_type\b)\s+\b{{valid_id}}\b\s*(?=\()
       captures:
         1: meta.function.method_type.specman keyword.declaration.specman
-        2: entity.name.function.specman
-        5: punctuation.section.parens.begin.specman
-      push:
-        - match: \)
-          scope: punctuation.section.parens.end.specman
-          pop: true
-        - include: literals
-        - include: operators
+        2: meta.function.method_type.specman entity.name.function.specman
+    - match: (#\s*(?:undef))\s*((?:`)?{{valid_id}})
+      captures:
+        1: keyword.control.import.specman
+        2: variable.other.define.specman
+
 
 ####### these pick-up any remaining scopes not matched above
 
