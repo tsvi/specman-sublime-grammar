@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] - yyyy-mm-dd
+## [1.0.0] - 2019-mm-dd
 ### Changed
 - Initial release
-- Fork from Tsvi Mostovicz's version changed significantly
+  Fork from Tsvi Mostovicz's version, major rework
