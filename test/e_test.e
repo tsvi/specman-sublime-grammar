@@ -15,6 +15,7 @@ type bla: [BLUE, GREEN, YELLOW](bits: 2);
 type int_small: uint[0..500](bits: 10);
 
 extend sys {
+
     l1[20] : list of byte;
 
     obj: obj_s is instance;
@@ -97,6 +98,9 @@ extend sys {
           message(NONE, "Error: Cannot read color data.");
           break;
       };
+
+      start multi_line_method_params(get_a(a), b);
+      assert (add == foo(x));
     };
 
     walk_objections(unt: any_unit, obj_kind: objection_kind) is {
@@ -108,14 +112,16 @@ extend sys {
       };
    };
 
-   start multi_line_method_params(get_a(a), b);
-   assert (a == foo(x)); // DEBUG
 
-   multi_line_method_params (a: int, // DEBUG
-                             b: bool
-                             ) is {
 
+   has_restriction(range: address_range_s,
+                   restr: access_restriction_t,
+                   master_name: bus_interface_names_t = UNDEFINED): bool is {
+      if intersect_range(range) {
+         result = (restrictions.has(it == restr) and (bus_interface_names.is_empty() or master_name == UNDEFINED or bus_interface_names.has(it == master_name))) ? TRUE : FALSE;
+      };
    };
+
 
 
 };

@@ -371,6 +371,16 @@ contexts:
 
   # 7.2 Invoking methods
   built-in-function-calls:
+    - match: \b({{built_in_functions_optional_parens}})\b(?=\s*(\()?)
+      scope: support.function.builtin.specman
+      push:
+        - meta_scope: meta.function-call.builtin.specman
+        - match: (?=\()
+          pop: true
+        - match: \s*(;)
+          pop: true
+          scope: punctuation.terminator.specman
+        - include: actions
     - match: '({{built_in_functions}})\s*(\()'
       captures:
         1: support.function.builtin.specman
@@ -378,16 +388,6 @@ contexts:
       push:
         - meta_scope: meta.function-call.builtin.specman
         - include: function-call-parameters
-    - match: (\b{{built_in_functions_optional_parens}}\b)(?=\s|\()
-      captures:
-        1: support.function.builtin.specman
-      push:
-        - meta_scope: meta.function-call.builtin.specman
-        - match: \s*(;)
-          pop: true
-          captures:
-            1: punctuation.terminator.specman
-        - include: actions
     # Covers literal list expressions
     - match: \.({{list_pseudo_methods}}|{{built_in_member_functions}}|{{set_pseudo_methods}})\s*(\()
       captures:
