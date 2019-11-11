@@ -93,8 +93,8 @@ contexts:
   # 1.2.3 Struct Members
   code:
     - meta_content_scope: meta.class.body.specman
-    - include: priority-scopes
     - include: member-declaration
+    - include: priority-scopes
     - include: scalar-types
     - include: when-inheritance
     - include: scalar-type-definition
@@ -661,7 +661,7 @@ contexts:
         6: storage.type.specman
 
     # Match most field members
-    - match: '({{struct_access}}\s+)?(static\s+)?(const\s+)?(!|~\s*)?(%\s*)?(?:{{valid_id}}\s*)(:)(?:\s*{{valid_type_no_modifier}}\s*)(;|=)'
+    - match: '({{struct_access}}\s+)?(static\s+)?(const\s+)?([!|~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(:)(?:\s*{{valid_type_no_modifier}}\s*)(;|=)'
       captures:
         1: storage.modifier.access.specman
         2: storage.modifier.static.specman
@@ -674,7 +674,7 @@ contexts:
         9: punctuation.terminator.specman
 
     # Match scalar field members if not matched above (no semicolon because valid_scalar_type contains lookahead)
-    - match: '({{struct_access}}\s+)?(static\s+)?(const\s+)?(!|~\s*)?(%\s*)?(?:{{valid_id}}\s*)(:)(?:\s*{{valid_scalar_type}}\s*)'
+    - match: '({{struct_access}}\s+)?(static\s+)?(const\s+)?([!|~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(:)(?:\s*{{valid_scalar_type}}\s*)'
       captures:
         1: storage.modifier.access.specman
         2: storage.modifier.static.specman
@@ -686,7 +686,7 @@ contexts:
         8: storage.type.specman
 
     # Struct/unit member
-    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?(!|~\s*)?(%\s*)?(?:{{valid_id}}\s*)(\:)\s*(?:{{valid_struct_type}})\s*(\bis\s+instance\b)?\s*(;|=)
+    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?([!|~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(\:)\s*(?:{{valid_struct_type}})\s*(\bis\s+instance\b)?\s*(;|=)
       captures:
         1: storage.modifier.access.specman
         2: storage.modifier.static.specman
@@ -700,7 +700,7 @@ contexts:
         10: punctuation.terminator.specman
 
     # Enum member
-    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?(!|~\s*)?(%\s*)?(?:{{valid_id}}\s*)(\:)\s*(\[\s*)
+    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?([!~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(\:)\s*(\[\s*)
       captures:
         1: storage.modifier.access.specman
         2: storage.modifier.static.specman
