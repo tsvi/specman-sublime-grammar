@@ -5,7 +5,7 @@ Specman/e-language syntax for Sublime Text 3
 Place the syntax files somewhere in the Packages directory of Sublime. Check View->Syntax, an entry "Specman" should be there.
 If not, check View-> Show Console for errors.
 
-## Install via Package Control
+## Install via Package Control (not yet available NOV/11/2019)
 Go to Preferences -> Package Control, "Install Package" and search for "Specman"
 
 ![Screenshot](collaterals/Screenshot.png)
