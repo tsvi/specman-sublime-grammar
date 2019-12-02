@@ -1,0 +1,959 @@
+%YAML 1.2
+---
+name: SpecmanCode
+
+# The e-syntax hierarchy roughly corresponds to the level of indentation shown below:
+# statements
+#     struct members
+#         actions
+#             expressions
+# This is not fully mapped here, to avoid too deep nesting of scopes and also
+# because e.g. expressions can be used in struct memebers
+# There is a rich set of support functions in the e-language and it is also
+# still undergoing evolution, so not all constructs might be supported ATM.
+# Note: Numbered comments refer to chapters in the Specman e Language reference
+# See also: https://www.sublimetext.com/docs/3/syntax.html and https://www.sublimetext.com/docs/3/scope_naming.html
+
+scope: source.specman
+hidden: true
+
+variables:
+  scalar_types: int|uint|longint|longuint|bit|nibble|byte|time|bool|numeric
+  built_in_types: ({{scalar_types}}|string|real|set|untyped|rdv_semaphore|semaphore|locker|external_pointer|any_buffer_port|any_unit|any_struct|any_sequence|objection_kind)
+  built_in_constants: TRUE|FALSE|NULL|UNDEF|MAX_INT|MIN_INT|MAX_LONGINT|MIN_LONGINT|MAX_UINT|MAX_LONGUINT
+
+  # Tags in comment.line that will be highlighted
+  comment_tags: 'TODO:?|DEBUG:?|FIXME:?|BAUSTELLE:?|TBD:?'
+
+  # Pre-defined functions
+  string_functions: hex|dec|bin|quote|str_chop|str_empty|str_exactly|str_insensitive|str_join|str_len|str_lower|str_match|str_pad|str_replace|str_split|str_split_all|str_sub|str_upper
+  arithmetic_functions: abs|odd|even|ilog2|ilog10|ipow|isqrt|div_round_up
+  real_number_functions: dist_uniform|dist_normal|rdist_uniform|rdist_normal
+  bitwise_functions: bitwise_or|bitwise_nand|bitwise_xor|bitwise_nor|bitwise_xnor
+  output_functions: messagef|message|appendf|append|dut_errorf|dut_error|out|outf
+  unit_functions: get_unit|get_all_units|get_enclosing_unit|try_enclosing_unit|set_unit|agent_code|agent|hdl_path
+  built_in_functions: assert|warning|error|fatal|{{string_functions}}|{{arithmetic_functions}}|{{bitwise_functions}}|{{real_number_functions}}|{{output_functions}}|{{unit_functions}}|read_only|value|sn_unique_id_for_struct|deep_copy|deep_compare|deep_compare_physical|bitwise_and|range
+
+  # Pre-defined functions that dont need parentheses
+  built_in_functions_optional_parens: assert|print|start
+
+  # functions called member-function-style
+  list_pseudo_methods: add|add0|clear|delete|fast_delete|insert|pop0|pop|push0|push|resize|all_different|apply|copy|count|exists|first|first_index|flatten|get_indices|has|is_a_permutation|is_empty|last|last_index|max|max_index|max_value|min|min_index|min_value|reverse|size|sort|sort_by_field|split|top0|top|unique|all|all_indices|and_all|or_all|average|product|sum|crc_8|crc_32|crc_32_flip|key|key_index|key_exists
+  set_pseudo_methods: size|uint_size|size_is_uint|min|max|int_min|int_max|min_is_int|max_is_int|uint_min|uint_max|min_is_uint|max_is_uint|get_all_ranges|collect_all_ranges|get_range|get_range_below|get_range_above
+  built_in_member_functions: hdl_path|external_type|hdl_convertor|hdl_expression|reset_soft|e_impl|driver|driver_delay|edge|inverse|pack_options|pli_access|pli_field_access|read_type|to_string
+
+  # The following should include all keywords which are invalid as a user defined name
+  # Note; the keywords should be enclosed with \b but this is not supported in negative-look-behind in ST3 Build < 3200
+  built_in_variables: it|me|index|result
+  invalid_names: keep| if| if|static|const|{{struct_access}}
+
+  # Re-usable patterns
+  singletons: sys|global|utils|message_manager|tf_domain_manager|rf_manager
+  struct_access: package|protected|private
+  concurrency_actions: first\s+of|all\s+of
+  #scalar_range_modifier: '\[\s*[a-zA-Z0-9_\-\+%]+\s*\.\.\s*[a-zA-Z0-9_\-\+%]+\s*\]'
+  scalar_range_modifier: '\[\s*\S+\s*\.\.\s*\S+\s*\]'
+  scalar_width_modifier: \(\s*(?:bits|bytes)\s*:\s*[\d\*]+\s*\)
+  # Valid name that can also be a hierarchical reference
+  valid_name: ([a-zA-Z](?:[a-zA-Z0-9_.:]+)?(?<!{{invalid_names}}))
+  # Simple valid identifier
+  valid_id: ([a-zA-Z](?:[a-zA-Z0-9_]+)?(?<!{{invalid_names}}))
+  # Valid identifier that includes ' for things like TRUE'has_checker; no negative look-ahead because we use it in repetition
+  valid_determinant: ([a-zA-Z](?:[a-zA-Z0-9_\']+)?)
+  valid_list_decl: (?:list(?:\s*\(\s*key\s*\:\s*[a-zA-Z](?:[a-zA-Z0-9_]*\s*\)))?\s+of\s+)
+  valid_type: (?:{{valid_list_decl}})*(?:{{valid_id}}\s*)(?=(?:{{scalar_range_modifier}})?\s*(?:{{scalar_width_modifier}})?)
+  valid_type_no_modifier: (?:{{valid_list_decl}})*(?:{{valid_id}}\s*)
+  valid_struct_type: (?:{{valid_list_decl}})*(?:\s+{{valid_determinant}}\s*)+
+  valid_scalar_type: (?:{{valid_list_decl}})*\b({{scalar_types}})(?=(?:{{scalar_range_modifier}})?\s*(?:{{scalar_width_modifier}})?)
+
+contexts:
+
+  # 1.2.2 Statements
+  main:
+    - match: \b(package)\s+(.*)(;)
+      captures:
+        1: entity.name.namespace.specman
+        2: entity.name.specman
+        3: punctuation.terminator.specman
+    - match: \b(import)\s+(.*)(;)
+      captures:
+        1: keyword.control.import.specman
+        2: entity.name.filename.specman
+        3: punctuation.terminator.specman
+
+    - include: structs
+    - include: macros
+    - include: templates
+    - include: code
+
+  # Include comments in all scopes (except strings)
+  prototype:
+    - include: comments
+
+  # 1.2.3 Struct Members
+  code:
+    - meta_content_scope: meta.class.body.specman
+    - include: member-declaration
+    - include: priority-scopes
+    - include: scalar-types
+    - include: when-inheritance
+    - include: scalar-type-definition
+    - include: checks
+    - include: constraint-def
+    - include: code-blocks
+    - include: methods
+    - include: stray-brackets-code
+    - include: default-scopes
+
+  # 1.2.4 Actions
+  actions:
+    - meta_content_scope: meta.actions.specman
+    - include: priority-scopes
+    - include: inline-generation
+    - include: struct-allocation
+    - include: variable-declaration
+    - include: checks
+    - include: function-calls
+    - include: code-blocks
+    - include: stray-brackets-actions
+    - include: default-scopes
+
+  # Group commonly used scopes
+  priority-scopes:
+    - include: literals
+    - include: template-params
+    - include: operators
+    - include: built-in-variables
+    - include: type-casting
+    - include: preprocessor
+    - include: built-in-function-calls
+
+  # stray brackets/braces (taken from systemverilog syntax)
+  stray-brackets:
+    - match: '\)|\]'
+      scope: invalid.illegal.stray-bracket-end.specman
+
+  stray-brackets-code:
+    - match: '\('
+      push:
+        - meta_content_scope: meta.class.body.specman
+        - match: '\)'
+          pop: true
+        - match: '[^\)\n]*$(?!\n)'
+          scope: invalid.illegal.unbalanced-bracket.specman
+        - include: code
+    - match: '\['
+      push:
+        - meta_content_scope: meta.class.body.specman
+        - match: '\]'
+          pop: true
+        - match: '[^\]\n]*$(?!\n)'
+          scope: invalid.illegal.unbalanced-bracket.specman
+        - include: code
+    - include: stray-brackets
+
+  stray-brackets-actions:
+    - match: '\('
+      push:
+        - meta_content_scope: meta.actions.specman
+        - match: '\)'
+          pop: true
+        - match: '[^\)\n]*$(?!\n)'
+          scope: invalid.illegal.unbalanced-bracket.specman
+        - include: actions
+    - match: '\['
+      push:
+        - meta_content_scope: meta.actions.specman
+        - match: '\]'
+          pop: true
+        - match: '[^\]\n]*$(?!\n)'
+          scope: invalid.illegal.unbalanced-bracket.specman
+        - include: actions
+    - include: stray-brackets
+
+  # 1.1.3 Comments and White space
+  comments:
+    - match: (//|--)
+      scope: punctuation.section.comment.specman
+      push: comment-contents
+    - match: (^'>)
+      scope: punctuation.section.comment.begin.specman
+      push: comment-multiline
+
+  comment-contents:
+    - meta_scope: comment.line.specman
+    - meta_include_prototype: false
+    - match: \b{{comment_tags}}
+      scope: invalid
+    - match: \n
+      pop: true
+
+  comment-multiline:
+    - meta_content_scope: text.specman
+    - meta_include_prototype: false
+    - match: (^<')
+      scopë: punctuation.section.comment.end.specman
+      pop: true
+
+  string:
+    - meta_scope: string.quoted.double.specman
+    - meta_include_prototype: false
+    - match: \\n|\\t|\\f|\\"|\\\\|\\r
+      scope: constant.character.escape.specman
+    - match: '"'
+      scope: punctuation.definition.string.end.specman
+      pop: true
+
+  literals:
+    # 1.1.4.3 MVL literals
+    - match: \b((?:\d+)(')(?:[oO])[0-7]([0-7xXzZuUlLhHwWnN_]+)?)\b
+      captures:
+        1: constant.numeric.mvl.octal.specman
+        2: punctuation.separator.literal.specman
+
+    - match: \b((?:\d+)(')(?:[hHxX])[0-9a-fA-F]([0-9a-fA-FxXzZuUlLhHwWnN_]+)?)\b
+      captures:
+        1: constant.numeric.mvl.hex.specman
+        2: punctuation.separator.literal.specman
+
+    - match: \b((?:\d+)(')(?:[bB])[0-1]([0-1xXzZuUlLhHwWnN_]+)?)\b
+      captures:
+        1: constant.numeric.mvl.binary.specman
+        2: punctuation.separator.literal.specman
+
+    # 1.1.4.1 Unsized numbers
+    - match: \b(-?([0-9_]+[kKmM]?))\b
+      scope: constant.numeric.unsized.integer.specman
+
+    - match: \b(0(?:[bB])\s*[0-1_xXzZ?]+)\b
+      captures:
+        1: constant.numeric.unsized.binary.specman
+        # 2: storage.modifier.constant.type.specman
+
+    - match: \b(0(?:[xX])\s*[0-9a-fA-F_xXzZ?]+)\b
+      captures:
+        1: constant.numeric.unsized.hex.specman
+        # 2: storage.modifier.constant.type.specman
+
+    - match: \b(0(?:[oO])\s*[0-9a-fA-F_xXzZ?]+)\b
+      captures:
+        1: constant.numeric.unsized.octal.specman
+
+    # 1.1.4.2 Sized numbers
+    - match: \b((?:\d+)?(')(?:[dD])\s*[0-9_]+)\b
+      captures:
+        1: constant.numeric.sized.integer.specman
+        2: punctuation.separator.literal.specman
+
+    - match: \b((?:\d+)?(')(?:[bB])\s*[0-1_]+)\b
+      captures:
+        1: constant.numeric.sized.binary.specman
+        2: punctuation.separator.literal.specman
+
+    - match: \b((?:\d+)?(')(?:[hHxX])\s*[0-9a-fA-F_]+)\b
+      captures:
+        1: constant.numeric.sized.hex.specman
+        2: punctuation.separator.literal.specman
+
+    - match: \b((?:\d+)?(')(?:[oO])\s*[0-7_]+)\b
+      captures:
+        1: constant.numeric.sized.octal.specman
+        2: punctuation.separator.literal.specman
+
+    # 1.1.4.4 Predefined constants
+    - match: \b({{built_in_constants}})\b
+      scope: constant.language.specman
+
+    # 1.1.4.5 Literal string
+    - match: '"'
+      scope: punctuation.definition.string.begin.specman
+      push: string
+
+    # 1.1.4.6 Literal character
+    - match: 0c"[a-zA-Z]"
+      scope: constant.character.literal.specman
+
+  operators:
+    - scope: keyword.operator.word.specman
+      match: \b(and|or|not|now|in|in_table|)\b
+
+    - scope: keyword.operator.boolean.specman
+      match: '(&&|\|\||!|=>)'
+
+      # Note: we exclude the delayed assignment operator here because it is already
+      # in the comparison operator match
+    - scope: keyword.operator.assignment.specman
+      match: '(=|\+=|-=|\*=|:=)'
+
+    - scope: keyword.operator.comparison.specman
+      match: (==|!=|>|<|===|!===|>=|<=)
+
+    - scope: keyword.operator.arithmetic.specman
+      match: (-|\+|\*|/)
+
+    - scope: keyword.operator.bitwise.specman
+      match: '(&|\||~|!|\^)'
+
+    - scope: keyword.operator.width-modifier.specman
+      match: \bbits\b|\bbytes\b
+
+    - scope: keyword.operator.accessor.event.specman
+      match: \@
+
+  scalar-types:
+    - match: \s*(?:\b{{valid_scalar_type}})\b
+      captures:
+        1: storage.type.specman
+
+  type-casting:
+    - match: \.(as_a)\s*(\()
+      captures:
+        1: keyword.other.type-casting.specman
+        2: punctuation.section.parens.begin.specman
+      push:
+        - meta_scope: meta.type-casting.builtin.specman
+        - match: (\()     # push if there is an extra width modifier
+          scope: punctuation.section.parens.begin.specman
+          push:
+            - match: (\))
+              scope: punctuation.section.parens.end.specman
+              pop: true
+            - include: literals
+            - include: operators
+        - match: (\))
+          pop: true
+          captures:
+            1: punctuation.section.parens.end.specman
+        - match: (?:\b{{valid_type_no_modifier}}\b)
+          scope: storage.type.specman
+        - include: literals
+        - include: operators
+      # type-constraint
+    - match: \btype\b
+      scope: keyword.other.constraint.specman
+    - match: (\bis\s+(?:\bnot\b)?\s*a)(?:\s+{{valid_determinant}})+
+      captures:
+        1: keyword.other.type-casting.specman
+        2: storage.type.specman
+
+  # 2.7 Defining and extending scalar types
+  scalar-type-definition:
+    - match: '\b(type|extend)\b\s+{{valid_id}}\s*:\s*{{valid_type}}(\s*;)?'
+      captures:
+        1: keyword.declaration.specman
+        2: storage.type.specman
+        3: storage.type.specman
+        4: punctuation.terminator.specman
+    # start of (multi-line) enum declaration
+    - match: '\b(type|extend)\b\s+{{valid_id}}\s*:\s*(\[\s*)'
+      captures:
+        1: keyword.declaration.specman
+        2: storage.type.enum.specman
+        3: punctuation.brackets.begin.specman
+      push: enum-values-declaration
+
+  enum-values-declaration:
+    - meta_content_scope: meta.type.enum.specman
+    - match: (\s*,)
+      captures:
+        1: punctuation.separator.specman
+    - match: (\s*,)?(?:\s*{{valid_id}}\s*)(=\s*)?
+      captures:
+        1: punctuation.separator.specman
+        2: constant.other.enum.specman
+        3: keyword.operator.assignment.specman
+    - match: '(\]\s*)(?={{scalar_width_modifier}})?'
+      captures:
+        1: punctuation.brackets.end.specman
+      pop: true
+    - include: literals
+    - include: operators
+
+  # 7.2 Invoking methods
+  built-in-function-calls:
+    - match: \b({{built_in_functions_optional_parens}})\b(?=\s*(\()?)
+      scope: support.function.builtin.specman
+      push:
+        - meta_scope: meta.function-call.builtin.specman
+        - match: (?=\()
+          pop: true
+        - match: \s*(;)
+          pop: true
+          scope: punctuation.terminator.specman
+        - include: actions
+    - match: '({{built_in_functions}})\s*(\()'
+      captures:
+        1: support.function.builtin.specman
+        2: punctuation.section.parens.begin.specman
+      push:
+        - meta_scope: meta.function-call.builtin.specman
+        - include: function-call-parameters
+    # Covers literal list expressions
+    - match: \.({{list_pseudo_methods}}|{{built_in_member_functions}}|{{set_pseudo_methods}})\s*(\()
+      captures:
+        1: support.function.builtin.specman
+        2: punctuation.section.parens.begin.specman
+      push:
+        - meta_scope: meta.function-call.builtin.specman
+        - include: function-call-parameters
+    # Covers for each with index (so it's not confused with function-call)
+    - match: (\bfor\s+each\b)\s*(?:\(\s*{{valid_id}}\s*\)\s*)?(?:\busing\s+index\s*\(\s*{{valid_id}}\s*\)\s*)?(in)\s+(?:{{valid_name}})(?=\s*\{)
+      captures:
+        1: keyword.control.specman
+        2: variable.other.specman
+        3: variable.other.specman
+        4: keyword.control.specman
+        5: variable.other.specman
+
+  function-calls:
+    - match: (?=\b{{valid_name}}\b\s*\()
+      push: function-consume
+
+  function-consume:
+    - meta_scope: meta.function-call.specman
+    - match: (?!\bis\sa\b)    # waive type-cast TODO: DEBUG
+      pop: true
+    - match: (?=\bis\s+\b) # waive method definition
+      pop: true
+    - match: \.({{list_pseudo_methods}}|{{built_in_member_functions}}|{{set_pseudo_methods}})\s*(\()
+      captures:
+        1: support.function.builtin.specman
+        2: punctuation.section.parens.begin.specman
+      set: function-call-parameters
+
+    - match: \b{{valid_id}}\b\s*(\()
+      captures:
+        1: variable.function.specman
+        2: punctuation.section.parens.begin.specman
+      set: function-call-parameters
+
+  function-call-parameters:
+    - match: (,)
+      scope: punctuation.separator.specman
+    - match: (\))\s*(?=;)?   # don't consume the ; because it could be for built_in_functions_optional_parens
+      pop: true
+      captures:
+        1: punctuation.section.parens.end.specman
+        2: punctuation.terminator.specman
+    - include: actions
+
+
+  # 7.1 Defining and Extending Methods
+  methods:
+    - match: (?=^\s*(?:{{struct_access}})?\s*(static\s+)?(final\s+)?\s*\b{{valid_id}}\b\s*\()
+      push: method-declaration
+
+  method-declaration:
+    - match: ({{struct_access}})?\s*(static\s+)?(final\s+)?\s*\b{{valid_id}}\b\s*(\()
+      captures:
+        1: storage.modifier.function.specman
+        2: storage.modifier.function.specman
+        3: storage.modifier.function.specman
+        4: meta.method.identifier.specman entity.name.function.specman
+        5: meta.method.parameters.specman punctuation.section.parens.begin.specman
+      set: method-parameters
+    - match: ^((?!is).)*$
+      pop: true
+
+  method-parameters:
+    - meta_content_scope: meta.method.parameters.specman
+    - match: (?:{{valid_id}}\s*(:)\s*(?:(\*)?{{valid_type}}))
+      captures:
+        1: variable.parameter.specman
+        2: punctuation.separator.parameter.specman
+        3: punctuation.accessor.parameter.specman
+        4: storage.type.specman
+    - match: ','
+      scope: punctuation.separator.parameter.specman
+    # This captures some declarative constructs that look like function calls, e.g. verifier.e_impl()
+    - match: \)\s*(;)
+      scope: punctuation.section.parens.end.specman
+      captures:
+        1: punctuation.terminator.specman
+      pop: true
+    - match: \)
+      scope: punctuation.section.parens.end.specman
+      set: method-declaration-end
+    - include: literals
+    - include: operators
+
+  method-declaration-end:
+    - match: (:)\s*{{valid_type}}
+      captures:
+        1: punctuation.separator.return-type.specman
+        2: meta.method.return-type.specman storage.type.specman
+    - match: (\@){{valid_id}}
+      captures:
+        1: punctuation.accessor.event.specman
+        2: keyword.control.function.event.specman
+    - match: (is)\s+(empty|undefined|import.*)\s*(;)
+      captures:
+        1: keyword.other.function.specman
+        2: keyword.modifier.function.specman
+        3: punctuation.terminator.specman
+      pop: true
+    - match: (is)\s+(only|first|also)?
+      captures:
+        1: keyword.other.function.specman
+        2: keyword.modifier.function.specman
+    - match: \{
+      scope: punctuation.section.method.begin.specman
+      set:
+        - meta_content_scope: meta.actions.specman
+        - include: actions
+        - match: (\})\s*(;)?
+          captures:
+            1: punctuation.section.method.end.specman
+            2: punctuation.terminator.specman
+          pop: true
+
+  # 8.2 var
+  # includes cover item declaration
+  variable-declaration:
+    - match: '\b(var|item)\b\s*(?:{{valid_id}}\s*):\s*{{valid_type}}'
+      captures:
+        1: keyword.declaration.specman
+        2: variable.other.specman
+        3: storage.type.specman
+    - match: '(\bvar\b)\s*(?:{{valid_id}}\s*):\s*(\[\s*)'
+      captures:
+        1: keyword.declaration.specman
+        2: variable.other.specman
+        3: punctuation.brackets.begin.specman
+      push: enum-values-declaration
+    # Implicitly typed variable
+    - match: '(\bvar\b)\s*(?:{{valid_id}}\s*)(:=\s*)'
+      captures:
+        1: keyword.declaration.specman
+        2: variable.other.specman
+        3: keyword.operator.assignment.specman
+
+  # 1.1.5.2 Macros
+  macros:
+    - match: ^\s*(\bdefine\b)\s+(?:{{valid_name}}\b)
+      scope: meta.preprocessor.macro.specman
+      captures:
+        1: keyword.control.define.specman
+        2: constant.other.specman
+
+  # 3.2.1 Structs
+  structs:
+    - match: (?=^\s*(?:struct|unit)\s+{{valid_id}}(?:\s+(like)\s+{{valid_id}})?\s*(?:of\s+\(\s*{{valid_id}}\s*\))?\s*(?:implementing\s+{{valid_id}}(?:\s*(,)\s*{{valid_id}})*)?\s*\{)
+      push: struct-declaration
+    - match: (?=^\s*extend(?:\s+{{valid_determinant}}\s*)+\s+(?:{{valid_id}}\s*)?\{)
+      push: struct-declaration
+    - match: (?=^(?:package\s*)?interface\s+{{valid_id}}(?:\s+like\s+)?)
+      push: struct-declaration
+
+  when-inheritance:
+    - match: (?=^\s*when(?:\s+{{valid_determinant}}\s*)+\s*\{)
+      push: struct-declaration
+
+  struct-declaration:
+    - meta_scope: meta.class.declaration.specman
+    - match: \b(struct|unit)\s+{{valid_id}}(?:\s+(like)\s+{{valid_id}})?\s*(?:of\s+\(\s*{{valid_id}}\s*\))?\s*(?:(implementing)\s+{{valid_id}}(?:\s*,\s*{{valid_id}})*)?\s*(\{)
+      captures:
+        1: keyword.declaration.class.specman
+        2: entity.name.class.specman
+        3: keyword.declaration.like.specman
+        4: entity.other.inherited-class.specman
+        5: entity.other.template.specman
+        6: keyword.declaration.interface.specman
+        7: storage.type.interface.specman
+        8: storage.type.interface.specman
+        9: punctuation.section.class.begin.specman
+      set:
+        - meta_content_scope: meta.class.body.specman
+        - match: (\})\s*(;)
+          pop: true
+          captures:
+            1: punctuation.section.class.end.specman
+            2: punctuation.terminator.specman
+        - include: code
+
+    - match: (\bextend|\bwhen)(?:\s+{{valid_determinant}}\s*)+\s*(\{)
+      captures:
+        1: keyword.declaration.class.specman
+        2: entity.name.class.specman
+        3: punctuation.section.class.begin.specman
+      set:
+        - meta_content_scope: meta.class.body.specman
+        - match: (\})\s*(;)
+          pop: true
+          captures:
+            1: punctuation.section.class.end.specman
+            2: punctuation.terminator.specman
+        - include: code
+
+    - match: (\bpackage\s*)?(\binterface)(?:\s+{{valid_id}})(?:\s+(like)\s+{{valid_id}}(?:\s*,\s*{{valid_id}})*)?\s*(\{)
+      captures:
+        1: entity.name.namespace.specman
+        2: keyword.declaration.interface.specman
+        3: entity.name.interface.specman
+        4: keyword.declaration.like.specman
+        5: storage.type.interface.specman
+        6: storage.type.interface.specman
+        7: punctuation.section.interface.begin.specman
+      set:
+        - meta_content_scope: meta.interface.body.specman
+        - match: (\})\s*(;)
+          pop: true
+          captures:
+            1: punctuation.section.interface.end.specman
+            2: punctuation.terminator.specman
+        - include: code
+
+  # 5. Template Types
+  templates:
+    - match: (?=^\s*(?:package\s+)?template\s+(?:extend\s+)?\b(?:struct|unit|interface|numeric_type)\b)
+      push: template-declaration
+
+  template-declaration:
+    - meta_scope: meta.class.declaration.template.specman
+    - match: (package\s+)?(template)\s+(extend\s+)?\b(struct|unit|interface)\b\s+(?:{{valid_id}}\s+)\bof\b\s+
+      captures:
+        1: entity.name.namespace.specman
+        2: keyword.declaration.template.specman
+        3: keyword.declaration.specman
+        4: keyword.declaration.class.specman
+        5: entity.name.class.template.specman
+      pop: true
+
+  template-params:
+    - match: (<)\s*(?:{{valid_id}}\s*)\'\s*\b(type|exp)(\s*>\s*)(:\s*)({{scalar_types}})
+      captures:
+        1: punctuation.separator.specman
+        2: variable.parameter.template.specman
+        3: keyword.declaration.specman
+        4: punctuation.separator.specman
+        5: punctuation.separator.specman
+        6: storage.type.specman
+    - match: (<)\s*(?:{{valid_id}}\s*)\'\s*\b(type|exp)(\s*>\s*)(?:(:\s*)(struct|interface|object|list|scalar|numeric|custom_numeric|enum|port))?
+      captures:
+        1: punctuation.separator.specman
+        2: variable.parameter.template.specman
+        3: keyword.declaration.specman
+        4: punctuation.separator.specman
+        5: punctuation.separator.specman
+        6: storage.type.category.specman
+    # Macro parameters
+    - match: (<)\s*(?:{{valid_id}}\s*)\'\s*\b(?:{{valid_id}}\s*)(>)
+      captures:
+        1: punctuation.separator.specman
+        2: variable.parameter.template.specman
+        3: keyword.declaration.specman
+        4: punctuation.separator.specman
+
+  member-declaration:
+    # 3.5 Defining Fields
+    # TODO: 5.3 template instance (for now only unit/struct ... of is supported)
+    # Match type with optional scalar modifiers
+    # Setting initial values with = we handle simply by terminating the match-expression
+
+    # Ports
+    - match: '({{struct_access}}\s+)?(?:{{valid_id}}\s*)(:)\s*(\blist\s+of\s*)?\b(in|out|inout)\b\s+([a-z]+_port\s+of)\s'
+      captures:
+        1: storage.modifier.access.specman
+        2: variable.other.member.specman
+        3: punctuation.separator.type.specman
+        4: storeage.modifier.specman
+        5: storage.modifier.direction.specman
+        6: storage.type.specman
+
+    # Match most field members
+    - match: '({{struct_access}}\s+)?(static\s+)?(const\s+)?([!|~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(:)(?:\s*{{valid_type_no_modifier}}\s*)(;|=)'
+      captures:
+        1: storage.modifier.access.specman
+        2: storage.modifier.static.specman
+        3: storage.modifier.const.specman
+        4: punctuation.definition.variable.generation.specman
+        5: punctuation.definition.variable.physical.specman
+        6: variable.other.member.specman
+        7: punctuation.separator.type.specman
+        8: storage.type.specman
+        9: punctuation.terminator.specman
+
+    # Match scalar field members if not matched above (no semicolon because valid_scalar_type contains lookahead)
+    - match: '({{struct_access}}\s+)?(static\s+)?(const\s+)?([!|~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(:)(?:\s*{{valid_scalar_type}}\s*)'
+      captures:
+        1: storage.modifier.access.specman
+        2: storage.modifier.static.specman
+        3: storage.modifier.const.specman
+        4: punctuation.definition.variable.generation.specman
+        5: punctuation.definition.variable.physical.specman
+        6: variable.other.member.specman
+        7: punctuation.separator.type.specman
+        8: storage.type.specman
+
+    # Struct/unit member
+    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?([!|~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(\:)\s*(?:{{valid_struct_type}})\s*(\bis\s+instance\b)?\s*(;|=)
+      captures:
+        1: storage.modifier.access.specman
+        2: storage.modifier.static.specman
+        3: storage.modifier.const.specman
+        4: punctuation.definition.variable.generation.specman
+        5: punctuation.definition.variable.physical.specman
+        6: variable.other.member.specman
+        7: punctuation.separator.type.specman
+        8: storage.type.class.specman
+        9: storage.modifier.specman
+        10: punctuation.terminator.specman
+
+    # Enum member
+    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?([!~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(\:)\s*(\[\s*)
+      captures:
+        1: storage.modifier.access.specman
+        2: storage.modifier.static.specman
+        3: storage.modifier.const.specman
+        4: punctuation.definition.variable.generation.specman
+        5: punctuation.definition.variable.physical.specman
+        6: variable.other.member.enum.specman
+        7: punctutation.separator.type.specman
+        8: punctuation.brackets.begin.specman
+      push: enum-values-declaration
+
+
+  # 11.1 Defining constraints
+  # In this scope, the keep statement has already been consumed; this way we can use the match patterns also
+  # for block-constraints
+  constraint-def:
+
+    - match: (\bkeep\b)\s+(?:\s*{{valid_name}})\.(reset_soft)
+      captures:
+        1: keyword.other.constraint.specman
+        2: variable.other.specman
+        3: keyword.modifier.constraint.specman
+
+    # TODO: extend regexp for full syntax
+    # for each [(item-name)] [using index (index-name)] [prev (prev-name)]] in gen-list {constraint-def | nested-for-each; ...}
+    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)?\s*(\bfor\s+each\b)\s*(?:\(\s*{{valid_id}}\s*\)\s*)?(?:\busing\s+index\s*\(\s*{{valid_id}}\s*\)\s*)?(in)\s+(?:{{valid_name}})(?=\s*\{)
+      captures:
+        1: keyword.other.constraint.specman
+        2: entity.name.label.specman
+        3: keyword.modifier.constraint.specman
+        4: keyword.control.specman
+        5: variable.other.specman
+        6: variable.other.specman
+        7: keyword.control.specman
+        8: variable.other.specman
+        9: punctuation.section.constraint_block.begin.specman
+
+    # keep all of <block> (need '{' in same line to detect it)
+    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(all\s+of\b)(?=\s*\{)
+      captures:
+        1: keyword.other.constraint.specman
+        2: entity.name.label.specman
+        3: keyword.control.specman
+        4: punctuation.section.constraint_block.begin.specman
+
+    # implication with block: keep <expr> => [all of ] <block> (need '{' in same line to detect it)
+    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)?\s*(.*)\s+(=>\s+)(all\s+of\b)?(?=\s*\{)
+      captures:
+        1: keyword.other.constraint.specman
+        2: entity.name.label.specman
+        3: keyword.modifier.constraint.specman
+        # # LHS expression
+        5: keyword.operator.logical.specman
+        6: keyword.control.specman
+        7: punctuation.section.constraint_block.begin.specman
+
+    # implication without block
+    # use look-ahead to allow matching the LHS expression elsewhere
+    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)?\s*(?=.*\s*(=>))
+      captures:
+        1: keyword.other.constraint.specman
+        2: entity.name.label.specman
+        3: keyword.modifier.constraint.specman
+        5: keyword.operator.logical.specman
+      push: constraint-expression
+
+    # before
+    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)?\s*(?:{{valid_name}}\s*)(\bbefore\b)\s*(?:{{valid_name}})(;)
+      captures:
+        1: keyword.other.constraint.specman
+        2: entity.name.label.specman
+        3: keyword.modifier.constraint.specman
+        4: variable.other.specman
+        5: keyword.other.constraint.specman
+        6: variable.other.specman
+        7: punctuation.terminator.specman
+
+    # select
+    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)\s*(?:{{valid_name}})\s+(==)\s+(\bselect\b)
+      captures:
+        1: keyword.other.constraint.specman
+        2: entity.name.label.specman
+        3: keyword.modifier.constraint.specman
+        4: variable.other.specman
+        5: keyword.operator.assignment.specman
+        6: keyword.other.constraint.specman
+
+    # All other constraints not matched above
+    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)?\s*
+      captures:
+        1: keyword.other.constraint.specman
+        2: entity.name.label.specman
+        3: keyword.modifier.constraint.specman
+      push: constraint-expression
+
+  constraint-expression:
+    - meta_scope: meta.constraint-expression.specman
+    - include: priority-scopes
+    - include: list-literals
+    - match: ;
+      scope: punctuation.terminator.specman
+      pop: true
+
+  checks:
+    - match: (\bcheck\b)\s+(?:{{valid_id}}\s+)?(\bthat\b)?\s+
+      captures:
+        1: keyword.statement.specman
+        2: entity.name.label.specman
+        3: keyword.other.specman
+
+  inline-generation:
+    - match: \s+(gen)\s+(?:{{valid_type_no_modifier}})
+      captures:
+        1: keyword.other.gen.specman
+        2: variable.other.specman
+      push: inline-generation-constraint
+
+  inline-generation-constraint:
+    - meta_content_scope: meta.constraint.specman
+    - match: ;
+      scope: punctuation.terminator.specman
+      pop: true
+    - match: (\bkeeping\b)(\s*\{)
+      captures:
+        1: keyword.other.constraint.specman
+        2: punctuation.section.constraint_block.begin.specman
+      set:
+        - meta_content_scope: meta.inline-generation.specman
+        - match: (\})\s*(;)
+          pop: true
+          captures:
+            1: punctuation.section.constraint_block.end.specman
+            2: punctuation.terminator.specman
+        - include: code
+
+  struct-allocation:
+    - match: \bnew\b
+      scope: meta.function-call.new.specman keyword.other.new.specman
+
+  built-in-variables:
+    - match: \b({{built_in_variables}})\b
+      captures:
+        1: variable.language.specman
+
+  # Code-block, includes 15.1 Synchronization Actions and 14.1 on-event
+  code-blocks:
+    - match: (\bon\b)\s*{{valid_name}}\s*(\{)
+      captures:
+        1: keyword.control.specman
+        2: variable.other.specman
+        3: punctuation.section.block.begin.specman
+      push:
+        - meta_content_scope: meta.code_block.specman
+        - include: actions
+        - match: (\})\s*(;)?
+          captures:
+            1: punctuation.section.block.end.specman
+            2: punctuation.terminator.specman
+          pop: true
+    - match: (\b{{concurrency_actions}}\b)?\s*\{
+      captures:
+        1: keyword.control.specman
+      scope: punctuation.section.block.begin.specman
+      push:
+        - meta_content_scope: meta.code_block.specman
+        - include: actions
+        - match: (\})\s*(;)?
+          captures:
+            1: punctuation.section.block.end.specman
+            2: punctuation.terminator.specman
+          pop: true
+
+  # This should not be included together with code-blocks, matches list-lterals in selected contexts
+  list-literals:
+    - match: (\{)
+      captures:
+        1: punctuation.section.list-literal.begin.specman
+      push:
+        - meta_content_scope: meta.list-literal.specman
+        - include: priority-scopes
+        - include: list-literals
+        - match: (;)
+          scope: punctuation.separator.specman
+        - match: (\})\s*
+          captures:
+            1: punctuation.section.list-literal.end.specman
+          pop: true
+
+  preprocessor:
+    - match: \s*(?:\}\s*)?(#\s*(?:ifdef|ifndef|else))\s*((?:`)?{{valid_id}})?\s*(\{)
+      captures:
+        1: keyword.control.import.specman
+        2: variable.other.define.specman
+        4: punctuation.section.block.begin.specman
+      push:
+      - meta_scope: meta.preprocessor.specman
+      - match: \}
+        scope: punctuation.section.block.end.specman
+        pop: true
+      - include: code
+    # Method-type declaration
+    - match: (\bmethod_type\b)\s+\b{{valid_id}}\b\s*(?=\()
+      captures:
+        1: meta.function.method_type.specman keyword.declaration.specman
+        2: meta.function.method_type.specman entity.name.function.specman
+    - match: (#\s*(?:undef))\s*((?:`)?{{valid_id}})
+      captures:
+        1: keyword.control.import.specman
+        2: variable.other.define.specman
+
+
+####### these pick-up any remaining scopes not matched above
+
+  default-scopes:
+    - scope: keyword.other.specman
+      match: \b(soft|compute|new)\b
+
+    - scope: keyword.other.statement.specman
+      match: \b(keep|export|extend|template|on|event|expect|check|that|routine|specman|radix|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
+
+    - scope: support.function.builtin.specman meta.function-call.builtin.specman
+      match: \b(initialize|delayed|exit|finish|post_generate|pre_generate|setup|setup_test|finalize_test|extract_test|init|run|copy|set_config|quit|lock|unlock|release|swap|quit|value|stop_run|get_config|get_indices|exec|pack|unpack)\b
+
+    - scope: keyword.control.specman
+      match: \b(until|repeat|while|for|from|to|step|each|do|break|continue|before|next|always|in|return|keeping)\b
+
+    - scope: keyword.other.packing.specman
+      match: \b(packing|low|high|network)\b
+
+    - scope: keyword.conditional.specman
+      match: \b(choose|matches|if|then|else|try|case|casex|casez|default)\b
+
+    - scope: keyword.other.temporal.specman
+      match: \b(cycle|sample|events|forever|wait|change|negedge|rise|fall|delay|sync|sim|true|detach|eventually|emit)\b
+
+    - scope: keyword.other.define.specman
+      match: \b(define|as|computed|verilog|vhdl|variable)\b
+
+    - scope: keyword.other.singleton.specman
+      match: \b({{singletons}})\b
+
+    - scope: keyword.other.file.specman
+      match: \b(files|load|module|ntv|source_ref|script|read|write)\b
+
+    - scope: keyword.other.fsm.specman
+      match: \b(initial|idle|others|posedge|clock|cycles)\b
+
+    - scope: storage.modifier.specman
+      match: \b(is\s+instance|list\s+of|attribute|::)\b
+
+    - scope: keyword.declaration.specman
+      match: \b(DPI-C|like|implementing|conditions|created_driver|created_kind|testflow|uvm_build_config)\b
+
+    - scope: punctuation.terminator.specman
+      match: \s*;
+# end
