@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Changed
 - minor fix to get correct scope for non-generatable attribute "!" in member-declaration
+- added more keywords
+- better for-each matching
 
 ## [1.0.0] - 2019-10-23
 ### Changed

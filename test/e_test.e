@@ -16,6 +16,9 @@ type int_small: uint[0..500](bits: 10);
 
 extend sys {
 
+    @import_python(module_name="plot_i", python_name="addVal")
+    addVal(groupName:string, cycle:int,grade:real) is imported;
+
     l1[20] : list of byte;
 
     obj: obj_s is instance;
@@ -110,6 +113,9 @@ extend sys {
       for each (u) in unt.get_objection_list(obj_kind) {
          walk_objections(u, obj_kind);
       };
+      for each (v) in x.bla_list {
+        a.quit();
+      }
    };
 
 
