@@ -380,7 +380,7 @@ contexts:
         - meta_scope: meta.function-call.builtin.specman
         - match: (?=\()
           pop: true
-        - match: \s*(;)
+        - match: \s*([;,])
           pop: true
           scope: punctuation.terminator.specman
         - include: actions
