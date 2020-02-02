@@ -11,5 +11,15 @@ extend sys {
          radix = HEX;
       item mask: uint (bits: 2) = sys.mask using radix = BIN;
    };
+
+   cover ended is {
+      item address : address_t = address
+      using ranges = {
+       range([set_of_values(address_t).min()], "First address");
+       range([set_of_values(address_t).min() + 1..set_of_values(address_t).max() - 1], "",
+                set_of_values(address_t).uint_size() / 10);
+       range([set_of_values(address_t).max()], "Last address");
+   };
+
 };
 '>

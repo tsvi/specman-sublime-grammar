@@ -31,16 +31,20 @@ variables:
   real_number_functions: dist_uniform|dist_normal|rdist_uniform|rdist_normal
   bitwise_functions: bitwise_or|bitwise_nand|bitwise_xor|bitwise_nor|bitwise_xnor
   output_functions: messagef|message|appendf|append|dut_errorf|dut_error|out|outf
-  unit_functions: get_unit|get_all_units|get_enclosing_unit|try_enclosing_unit|set_unit|agent_code|agent|hdl_path
-  built_in_functions: assert|warning|error|fatal|{{string_functions}}|{{arithmetic_functions}}|{{bitwise_functions}}|{{real_number_functions}}|{{output_functions}}|{{unit_functions}}|read_only|value|sn_unique_id_for_struct|deep_copy|deep_compare|deep_compare_physical|bitwise_and|range
+  unit_functions: get_unit|get_all_units|get_enclosing_unit|try_enclosing_unit|set_unit
+  conversion_functions: pack|unpack|all_values|full_set_of_values|set_of_values|to_specman_scale|from_specman_scale|to_specman_scale_trunc|from_specman_scale_trunc|to_real_specman_scale|from_real_specman_scale|double_to_specman_scale|double_from_specman_scale
+  misc_functions: read_only|value|sn_unique_id_for_struct|deep_copy|deep_compare|deep_compare_physical|bitwise_and|range
+  built_in_functions: assert|warning|error|fatal|{{string_functions}}|{{arithmetic_functions}}|{{bitwise_functions}}|{{real_number_functions}}|{{output_functions}}|{{unit_functions}}|{{conversion_functions}}|{{misc_functions}}
 
   # Pre-defined functions that dont need parentheses
   built_in_functions_optional_parens: assert|print|start
 
-  # functions called member-function-style
+  # Functions called in member-function-style
   list_pseudo_methods: add|add0|clear|delete|fast_delete|insert|pop0|pop|push0|push|resize|all_different|apply|copy|count|exists|first|first_index|flatten|get_indices|has|is_a_permutation|is_empty|last|last_index|max|max_index|max_value|min|min_index|min_value|reverse|size|sort|sort_by_field|split|top0|top|unique|all|all_indices|and_all|or_all|average|product|sum|crc_8|crc_32|crc_32_flip|key|key_index|key_exists
-  set_pseudo_methods: size|uint_size|size_is_uint|min|max|int_min|int_max|min_is_int|max_is_int|uint_min|uint_max|min_is_uint|max_is_uint|get_all_ranges|collect_all_ranges|get_range|get_range_below|get_range_above
-  built_in_member_functions: hdl_path|external_type|hdl_convertor|hdl_expression|reset_soft|e_impl|driver|driver_delay|edge|inverse|pack_options|pli_access|pli_field_access|read_type|to_string
+  set_pseudo_methods: union|intersect|diff|size|uint_size|size_is_uint|min|max|int_min|int_max|min_is_int|max_is_int|uint_min|uint_max|min_is_uint|max_is_uint|get_all_ranges|collect_all_ranges|get_range|get_range_below|get_range_above
+  any_struct_member_functions: check|copy|get_printed_lines|do_print|extract|finalize|init|quit|run|rerun
+  any_unit_member_functions: agent_code|agent||analog_agent_code|analog_code|e_path|full_external_uvm_path|full_hdl_path|get_children|get_hdl_language|get_native_path_name|get_parent_unit|get_ports|get_ports_recursively|hdl_path|pack_options|per_inst_cover|short_name_path|short_name|short_name_style
+  built_in_member_functions: pack_struct|external_type|hdl_convertor|hdl_expression|reset_soft|e_impl|driver|driver_delay|edge|inverse|pack_options|pli_access|pli_field_access|read_type|to_string
 
   # The following should include all keywords which are invalid as a user defined name
   # Note; the keywords should be enclosed with \b but this is not supported in negative-look-behind in ST3 Build < 3200
@@ -51,7 +55,6 @@ variables:
   singletons: sys|global|utils|message_manager|tf_domain_manager|rf_manager
   struct_access: package|protected|private
   concurrency_actions: first\s+of|all\s+of
-  #scalar_range_modifier: '\[\s*[a-zA-Z0-9_\-\+%]+\s*\.\.\s*[a-zA-Z0-9_\-\+%]+\s*\]'
   scalar_range_modifier: '\[\s*\S+\s*\.\.\s*\S+\s*\]'
   scalar_width_modifier: \(\s*(?:bits|bytes)\s*:\s*[\d\*]+\s*\)
   # Valid name that can also be a hierarchical reference
@@ -281,7 +284,7 @@ contexts:
       match: '(&&|\|\||!|=>)'
 
       # Note: we exclude the delayed assignment operator here because it is already
-      # in the comparison operator match
+      # part of the comparison operator match
     - scope: keyword.operator.assignment.specman
       match: '(=|\+=|-=|\*=|:=)'
 
@@ -377,7 +380,7 @@ contexts:
         - meta_scope: meta.function-call.builtin.specman
         - match: (?=\()
           pop: true
-        - match: \s*(;)
+        - match: \s*([;,])
           pop: true
           scope: punctuation.terminator.specman
         - include: actions
@@ -388,8 +391,8 @@ contexts:
       push:
         - meta_scope: meta.function-call.builtin.specman
         - include: function-call-parameters
-    # Covers literal list expressions
-    - match: \.({{list_pseudo_methods}}|{{built_in_member_functions}}|{{set_pseudo_methods}})\s*(\()
+    # Call (pseudo-) member functions
+    - match: \.({{list_pseudo_methods}}|{{built_in_member_functions}}|{{set_pseudo_methods}}|{{any_struct_member_functions}}|{{any_unit_member_functions}})\s*(\()
       captures:
         1: support.function.builtin.specman
         2: punctuation.section.parens.begin.specman
@@ -404,6 +407,13 @@ contexts:
         3: variable.other.specman
         4: keyword.control.specman
         5: variable.other.specman
+    # Same but only match until "in" to allow complex list-expressions or list-returning method-calls
+    - match: (\bfor\s+each\b)\s*(?:\(\s*{{valid_id}}\s*\)\s*)?(?:\busing\s+index\s*\(\s*{{valid_id}}\s*\)\s*)?(in)\s+
+      captures:
+        1: keyword.control.specman
+        2: variable.other.specman
+        3: variable.other.specman
+        4: keyword.control.specman
 
   function-calls:
     - match: (?=\b{{valid_name}}\b\s*\()
@@ -508,7 +518,7 @@ contexts:
           pop: true
 
   # 8.2 var
-  # includes cover item declaration
+  # Includes cover item declaration
   variable-declaration:
     - match: '\b(var|item)\b\s*(?:{{valid_id}}\s*):\s*{{valid_type}}'
       captures:
@@ -912,17 +922,17 @@ contexts:
         2: variable.other.define.specman
 
 
-####### these pick-up any remaining scopes not matched above
+####### These pick-up any remaining scopes not matched above
 
   default-scopes:
     - scope: keyword.other.specman
       match: \b(soft|compute|new)\b
 
     - scope: keyword.other.statement.specman
-      match: \b(keep|export|extend|template|on|event|expect|check|that|routine|specman|radix|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
+      match: \b(keep|export|extend|template|on|event|expect|routine|specman|radix|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
 
     - scope: support.function.builtin.specman meta.function-call.builtin.specman
-      match: \b(initialize|delayed|exit|finish|post_generate|pre_generate|setup|setup_test|finalize_test|extract_test|init|run|copy|set_config|quit|lock|unlock|release|swap|quit|value|stop_run|get_config|get_indices|exec|pack|unpack)\b
+      match: \b(initialize|delayed|exit|finish|post_generate|pre_generate|wave_setup|setup|setup_test|finalize|finalize_test|extract_test|run_test|get_timescale|is_gui|print_stack_trace|simulator_exists|simulator_save|sn_plusargs_exists|sn_plusarg_value|pre_save|pre_restore|post_restore|remap_tick_access|set_config|lock|unlock|release|swap|value|stop_run|get_config|get_indices|exec)\b
 
     - scope: keyword.control.specman
       match: \b(until|repeat|while|for|from|to|step|each|do|break|continue|before|next|always|in|return|keeping)\b
@@ -952,7 +962,7 @@ contexts:
       match: \b(is\s+instance|list\s+of|attribute|::)\b
 
     - scope: keyword.declaration.specman
-      match: \b(DPI-C|like|implementing|conditions|created_driver|created_kind|testflow|uvm_build_config)\b
+      match: \b(DPI-C|like|implementing|conditions|created_driver|created_kind|testflow|uvm_build_config|import_python)\b
 
     - scope: punctuation.terminator.specman
       match: \s*;
