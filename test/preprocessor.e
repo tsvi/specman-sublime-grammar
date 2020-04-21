@@ -1,6 +1,11 @@
 <'
 
 
+import mod2.e;
+#ifdef optional_syntax then {
+   import mod1.e;
+};
+
 extend sys {
 #ifdef set_this {
    when TRUE'has_this my_struct_s {
@@ -21,4 +26,6 @@ extend sys {
 
 
 };
+
+
 '>
