@@ -20,7 +20,7 @@ hidden: true
 variables:
   scalar_types: int|uint|longint|longuint|bit|nibble|byte|time|bool|numeric
   built_in_types: ({{scalar_types}}|string|real|set|untyped|rdv_semaphore|semaphore|locker|external_pointer|any_buffer_port|any_unit|any_struct|any_sequence|objection_kind)
-  built_in_constants: TRUE|FALSE|NULL|UNDEF|MAX_INT|MIN_INT|MAX_LONGINT|MIN_LONGINT|MAX_UINT|MAX_LONGUINT
+  built_in_constants: TRUE|FALSE|NULL|UNDEF|MAX_INT|MIN_INT|MAX_LONGINT|MIN_LONGINT|MAX_UINT|MAX_LONGUINT|SN_M_E|SN_M_LOG2E|SN_M_LOG10E|SN_M_LN2|SN_M_LN10|SN_M_PI|SN_M_TWO_PI|SN_M_PI_2|SN_M_PI_4|SN_M_1_PI|SN_M_2_PI|SN_M_2_SQRTPI|SN_M_SQRT2|SN_M_SQRT1_2
 
   # Tags in comment.line that will be highlighted
   comment_tags: 'TODO:?|DEBUG:?|FIXME:?|BAUSTELLE:?|TBD:?'
@@ -78,12 +78,7 @@ contexts:
         1: entity.name.namespace.specman
         2: entity.name.specman
         3: punctuation.terminator.specman
-    - match: \b(import)\s+(.*)(;)
-      captures:
-        1: keyword.control.import.specman
-        2: entity.name.filename.specman
-        3: punctuation.terminator.specman
-
+    - include: imports
     - include: structs
     - include: macros
     - include: templates
@@ -130,6 +125,14 @@ contexts:
     - include: type-casting
     - include: preprocessor
     - include: built-in-function-calls
+
+  # Import statements
+  imports:
+    - match: \b(import)\s+(.*)(;)
+      captures:
+        1: keyword.control.import.specman
+        2: entity.name.filename.specman
+        3: punctuation.terminator.specman
 
   # stray brackets/braces (taken from systemverilog syntax)
   stray-brackets:
@@ -195,7 +198,7 @@ contexts:
     - meta_content_scope: text.specman
     - meta_include_prototype: false
     - match: (^<')
-      scopë: punctuation.section.comment.end.specman
+      scope: punctuation.section.comment.end.specman
       pop: true
 
   string:
@@ -209,17 +212,22 @@ contexts:
 
   literals:
     # 1.1.4.3 MVL literals
-    - match: \b((?:\d+)(')(?:[oO])[0-7]([0-7xXzZuUlLhHwWnN_]+)?)\b
+    - match: \b((?:\d+)(')(?:[oO])[0-7xXzZuUlLhHwWnN]([0-7xXzZuUlLhHwWnN_]+)?)\b
       captures:
         1: constant.numeric.mvl.octal.specman
         2: punctuation.separator.literal.specman
 
-    - match: \b((?:\d+)(')(?:[hHxX])[0-9a-fA-F]([0-9a-fA-FxXzZuUlLhHwWnN_]+)?)\b
+    - match: \b((?:\d+)(')(?:[dD])[0-9xXzZuUlLhHwWnN]([0-9xXzZuUlLhHwWnN_]+)?)\b
+      captures:
+        1: constant.numeric.mvl.decimal.specman
+        2: punctuation.separator.literal.specman
+
+    - match: \b((?:\d+)(')(?:[hHxX])[0-9a-fA-FxXzZuUlLhHwWnN]([0-9a-fA-FxXzZuUlLhHwWnN_]+)?)\b
       captures:
         1: constant.numeric.mvl.hex.specman
         2: punctuation.separator.literal.specman
 
-    - match: \b((?:\d+)(')(?:[bB])[0-1]([0-1xXzZuUlLhHwWnN_]+)?)\b
+    - match: \b((?:\d+)(')(?:[bB])[0-1xXzZuUlLhHwWnN]([0-1xXzZuUlLhHwWnN_]+)?)\b
       captures:
         1: constant.numeric.mvl.binary.specman
         2: punctuation.separator.literal.specman
@@ -262,6 +270,11 @@ contexts:
       captures:
         1: constant.numeric.sized.octal.specman
         2: punctuation.separator.literal.specman
+
+    # 2.1.9.2. Real Literals
+    - match: \b([0-9][\.0-9_]*(?:[eE][\+\-]?[0-9][0-9_]*))\b
+      captures:
+         1: constant.numeric.real.specman
 
     # 1.1.4.4 Predefined constants
     - match: \b({{built_in_constants}})\b
@@ -900,17 +913,21 @@ contexts:
           pop: true
 
   preprocessor:
-    - match: \s*(?:\}\s*)?(#\s*(?:ifdef|ifndef|else))\s*((?:`)?{{valid_id}})?\s*(\{)
+    - match: \s*(?:\}\s*)?(#\s*(?:ifdef|ifndef|else))\s*((?:`)?{{valid_id}})?(\s+then\b)?\s*(\{)
       captures:
         1: keyword.control.import.specman
         2: variable.other.define.specman
-        4: punctuation.section.block.begin.specman
+        4: keyword.control.import.specman
+        5: punctuation.section.block.begin.specman
       push:
       - meta_scope: meta.preprocessor.specman
       - match: \}
         scope: punctuation.section.block.end.specman
         pop: true
+      - include: imports
+      - include: structs
       - include: code
+
     # Method-type declaration
     - match: (\bmethod_type\b)\s+\b{{valid_id}}\b\s*(?=\()
       captures:
