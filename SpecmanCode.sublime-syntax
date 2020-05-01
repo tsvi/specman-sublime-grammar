@@ -66,7 +66,7 @@ variables:
   valid_list_decl: (?:list(?:\s*\(\s*key\s*\:\s*[a-zA-Z](?:[a-zA-Z0-9_]*\s*\)))?\s+of\s+)
   valid_type: (?:{{valid_list_decl}})*(?:{{valid_id}}\s*)(?=(?:{{scalar_range_modifier}})?\s*(?:{{scalar_width_modifier}})?)
   valid_type_no_modifier: (?:{{valid_list_decl}})*(?:{{valid_id}}\s*)
-  valid_struct_type: (?:{{valid_list_decl}})*(?:\s+{{valid_determinant}}\s*)+
+  valid_struct_type: (?:{{valid_list_decl}})*(?:\b{{valid_determinant}}\s+)+
   valid_scalar_type: (?:{{valid_list_decl}})*\b({{scalar_types}})(?=(?:{{scalar_range_modifier}})?\s*(?:{{scalar_width_modifier}})?)
 
 contexts:
@@ -354,18 +354,20 @@ contexts:
 
   # 2.7 Defining and extending scalar types
   scalar-type-definition:
-    - match: '\b(type|extend)\b\s+{{valid_id}}\s*:\s*{{valid_type}}(\s*;)?'
+    - match: '\b(type|extend)\b\s+{{valid_id}}\s*(:)\s*{{valid_type}}(\s*;)?'
       captures:
         1: keyword.declaration.specman
         2: storage.type.specman
-        3: storage.type.specman
-        4: punctuation.terminator.specman
+        3: punctuation.separator.type.specman
+        4: storage.type.specman
+        5: punctuation.terminator.specman
     # start of (multi-line) enum declaration
-    - match: '\b(type|extend)\b\s+{{valid_id}}\s*:\s*(\[\s*)'
+    - match: '\b(type|extend)\b\s+{{valid_id}}\s*(:)\s*(\[\s*)'
       captures:
         1: keyword.declaration.specman
         2: storage.type.enum.specman
-        3: punctuation.brackets.begin.specman
+        3: punctuation.separator.type.specman
+        4: punctuation.brackets.begin.specman
       push: enum-values-declaration
 
   enum-values-declaration:
@@ -533,16 +535,18 @@ contexts:
   # 8.2 var
   # Includes cover item declaration
   variable-declaration:
-    - match: '\b(var|item)\b\s*(?:{{valid_id}}\s*):\s*{{valid_type}}'
+    - match: '\b(var|item)\b\s*(?:{{valid_id}}\s*)(:)\s*{{valid_type}}'
       captures:
         1: keyword.declaration.specman
         2: variable.other.specman
-        3: storage.type.specman
-    - match: '(\bvar\b)\s*(?:{{valid_id}}\s*):\s*(\[\s*)'
+        3: punctuation.separator.type.specman
+        4: storage.type.specman
+    - match: '(\bvar\b)\s*(?:{{valid_id}}\s*)(:)\s*(\[\s*)'
       captures:
         1: keyword.declaration.specman
         2: variable.other.specman
-        3: punctuation.brackets.begin.specman
+        3: punctuation.separator.type.specman
+        4: punctuation.brackets.begin.specman
       push: enum-values-declaration
     # Implicitly typed variable
     - match: '(\bvar\b)\s*(?:{{valid_id}}\s*)(:=\s*)'
@@ -709,7 +713,7 @@ contexts:
         8: storage.type.specman
 
     # Struct/unit member
-    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?([!|~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(\:)\s*(?:{{valid_struct_type}})\s*(\bis\s+instance\b)?\s*(;|=)
+    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?([!|~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(:)\s*(?:{{valid_struct_type}})\s*(\bis\s+instance\b)?\s*(;|=)
       captures:
         1: storage.modifier.access.specman
         2: storage.modifier.static.specman
@@ -723,7 +727,7 @@ contexts:
         10: punctuation.terminator.specman
 
     # Enum member
-    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?([!~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(\:)\s*(\[\s*)
+    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?([!~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(:)\s*(\[\s*)
       captures:
         1: storage.modifier.access.specman
         2: storage.modifier.static.specman

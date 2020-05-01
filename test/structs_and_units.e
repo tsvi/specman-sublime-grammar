@@ -23,6 +23,11 @@ unit foo_u {
    bar_l  : list of bar_s;
    const i: uint[0..10](bits: 3);
 
+   static check:check_u is instance;
+   const my: a'det b'det my_struct is instance;
+
+   agents: list of list of agent_u is instance;
+
    when BLUE foo_u {
 
    };
