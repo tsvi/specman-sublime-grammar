@@ -685,7 +685,7 @@ contexts:
         1: storage.modifier.access.specman
         2: variable.other.member.specman
         3: punctuation.separator.type.specman
-        4: storeage.modifier.specman
+        4: storage.modifier.specman
         5: storage.modifier.direction.specman
         6: storage.type.specman
 
@@ -741,6 +741,14 @@ contexts:
         8: punctuation.brackets.begin.specman
       push: enum-values-declaration
 
+    # Events
+    - match: (static\s+)?(event)\s+(?:{{valid_id}})(?:\s+(is)\s+(only)*)?
+      captures:
+        1: storage.modifier.static.specman
+        2: storage.type.specman
+        3: variable.other.member.event.specman
+        4: keyword.other.event.specman
+        5: keyword.modifier.event.specman
 
   # 11.1 Defining constraints
   # In this scope, the keep statement has already been consumed; this way we can use the match patterns also
@@ -952,7 +960,7 @@ contexts:
       match: \b(soft|compute|new)\b
 
     - scope: keyword.other.statement.specman
-      match: \b(keep|export|extend|template|on|event|expect|routine|specman|radix|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
+      match: \b(keep|export|extend|template|on|expect|routine|specman|radix|ignore|illegal|traceable|untraceable|cover|using|count_only|trace_only|at_least|transition|item|ranges|cross|text|call|task|within)\b
 
     - scope: support.function.builtin.specman meta.function-call.builtin.specman
       match: \b(initialize|delayed|exit|finish|post_generate|pre_generate|wave_setup|setup|setup_test|finalize|finalize_test|extract_test|run_test|get_timescale|is_gui|print_stack_trace|simulator_exists|simulator_save|sn_plusargs_exists|sn_plusarg_value|pre_save|pre_restore|post_restore|remap_tick_access|set_config|lock|unlock|release|swap|value|stop_run|get_config|get_indices|exec)\b
