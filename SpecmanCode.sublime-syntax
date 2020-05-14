@@ -984,7 +984,7 @@ contexts:
       match: \b({{singletons}})\b
 
     - scope: keyword.other.file.specman
-      match: \b(files|load|module|ntv|source_ref|script|read|write)\b
+      match: \b(files|load|ntv|source_ref|script|read|write)\b
 
     - scope: keyword.other.fsm.specman
       match: \b(initial|idle|others|posedge|clock|cycles)\b

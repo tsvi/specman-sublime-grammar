@@ -39,6 +39,10 @@ bla
 
       };
 
+      keep read_only(a) == b => all of {
+
+      };
+
       keep  soft  a  ==  select  { 10: TRUE; 90: FALSE;};
 
       keep soft shden == read_only(shadow_update_enable).as_a(bit);
