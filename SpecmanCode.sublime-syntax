@@ -67,8 +67,7 @@ variables:
   valid_list_decl: (?:list(?:\s*\(\s*key\s*\:\s*[a-zA-Z](?:[a-zA-Z0-9_]*\s*\)))?\s+of\s+)
   valid_type: (?:{{valid_list_decl}})*(?:{{valid_id}}\s*)(?=(?:{{scalar_range_modifier}})?\s*(?:{{scalar_width_modifier}})?)
   valid_type_no_modifier: (?:{{valid_list_decl}})*(?:{{valid_id}}\s*)
-  # A compound type or list of compound type as used in a field declaration; covers when-inheritance; note: includes trailing white-space
-  # valid_struct_type: (?:{{valid_list_decl}})*(?:\b{{valid_determinant}}\s*)+
+  # A compound type or list of compound type as used in a field declaration; covers when-inheritance;
   valid_struct_type: (?:{{valid_list_decl}})*(?:\b{{valid_determinant}}\s+)*?({{valid_determinant}})
   valid_scalar_type: (?:{{valid_list_decl}})*\b({{scalar_types}})(?=(?:{{scalar_range_modifier}})?\s*(?:{{scalar_width_modifier}})?)
   list_length_expr: (?:\[\s*[a-zA-Z0-9_]+\s*\]\s*)+
