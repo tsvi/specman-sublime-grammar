@@ -8,9 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - minor fix for struct member declaration
 - removed module as keyword
+- fixed struct/unit member decl.
 
 ### Added
 - matching of event declarations to member-declaration scope
+- matching of sized-list decl.
+- added curly braces to stray-bracket checks
 
 ## [1.0.2] - 2020-04-22
 ### Changed
