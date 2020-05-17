@@ -19,7 +19,8 @@ extend sys {
     @import_python(module_name="plot_i", python_name="addVal")
     addVal(groupName:string, cycle:int,grade:real) is imported;
 
-    l1[20] : list of byte;
+    !l1[20][3] : list of byte;
+    l2 : list of uint;
 
     obj: obj_s is instance;
 

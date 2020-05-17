@@ -17,11 +17,12 @@ struct bar_s {
 };
 
 unit foo_u {
-   bar    : GREEN'my_det bar_s;
-   const b: bool;
-   det    : [BLUE, RED, GREEN];
-   bar_l  : list of bar_s;
-   const i: uint[0..10](bits: 3);
+   bar      : GREEN'my_det bar_s;
+   const b  : bool;
+   det      : [BLUE, RED, GREEN];
+   bar_l    : list of bar_s;
+   const i  : uint[0..10](bits: 3);
+   bar_l2[2]: list of bar_s;
 
    static check:check_u is instance;
    const my: a'det b'det my_struct is instance;

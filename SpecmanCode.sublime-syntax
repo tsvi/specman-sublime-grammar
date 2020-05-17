@@ -62,14 +62,16 @@ variables:
   # Simple valid identifier
   valid_id: ([a-zA-Z](?:[a-zA-Z0-9_]+)?(?<!{{invalid_names}}))
   # Valid identifier that includes ' for things like TRUE'has_checker; no negative look-ahead because we use it in repetition
-  valid_determinant: ([a-zA-Z](?:[a-zA-Z0-9_\']+)?)
+  valid_determinant: (?:[a-zA-Z](?:[a-zA-Z0-9_\']+)?)
   # 'list of' or 'list(key: field) of' and multi-dimensional lists ('list of list of ...'); note: includes trailing white-space
   valid_list_decl: (?:list(?:\s*\(\s*key\s*\:\s*[a-zA-Z](?:[a-zA-Z0-9_]*\s*\)))?\s+of\s+)
   valid_type: (?:{{valid_list_decl}})*(?:{{valid_id}}\s*)(?=(?:{{scalar_range_modifier}})?\s*(?:{{scalar_width_modifier}})?)
   valid_type_no_modifier: (?:{{valid_list_decl}})*(?:{{valid_id}}\s*)
   # A compound type or list of compound type as used in a field declaration; covers when-inheritance; note: includes trailing white-space
-  valid_struct_type: (?:{{valid_list_decl}})*(?:\b{{valid_determinant}}\s+)+
+  # valid_struct_type: (?:{{valid_list_decl}})*(?:\b{{valid_determinant}}\s*)+
+  valid_struct_type: (?:{{valid_list_decl}})*(?:\b{{valid_determinant}}\s+)*?({{valid_determinant}})
   valid_scalar_type: (?:{{valid_list_decl}})*\b({{scalar_types}})(?=(?:{{scalar_range_modifier}})?\s*(?:{{scalar_width_modifier}})?)
+  list_length_expr: (?:\[\s*[a-zA-Z0-9_]+\s*\]\s*)+
 
 contexts:
 
@@ -84,6 +86,7 @@ contexts:
     - include: structs
     - include: macros
     - include: templates
+    # - include: covergroups
     - include: code
 
   # Include comments in all scopes (except strings)
@@ -138,7 +141,7 @@ contexts:
 
   # stray brackets/braces (taken from systemverilog syntax)
   stray-brackets:
-    - match: '\)|\]'
+    - match: '\)|\]|\}'
       scope: invalid.illegal.stray-bracket-end.specman
 
   stray-brackets-code:
@@ -158,6 +161,14 @@ contexts:
         - match: '[^\]\n]*$(?!\n)'
           scope: invalid.illegal.unbalanced-bracket.specman
         - include: code
+    - match: '\{'
+      push:
+        - meta_content_scope: meta.class.body.specman
+        - match: '\}'
+          pop: true
+        - match: '[^\}\n]*$(?!\n)'
+          scope: invalid.illegal.unbalanced-bracket.specman
+        - include: code
     - include: stray-brackets
 
   stray-brackets-actions:
@@ -175,6 +186,14 @@ contexts:
         - match: '\]'
           pop: true
         - match: '[^\]\n]*$(?!\n)'
+          scope: invalid.illegal.unbalanced-bracket.specman
+        - include: actions
+    - match: '\{'
+      push:
+        - meta_content_scope: meta.actions.specman
+        - match: '\}'
+          pop: true
+        - match: '[^\}\n]*$(?!\n)'
           scope: invalid.illegal.unbalanced-bracket.specman
         - include: actions
     - include: stray-brackets
@@ -349,7 +368,7 @@ contexts:
       # type-constraint
     - match: \btype\b
       scope: keyword.other.constraint.specman
-    - match: (\bis\s+(?:\bnot\b)?\s*a)(?:\s+{{valid_determinant}})+
+    - match: (\bis\s+(?:\bnot\b)?\s*a)(?:\s+({{valid_determinant}}))+
       captures:
         1: keyword.other.type-casting.specman
         2: storage.type.specman
@@ -527,12 +546,12 @@ contexts:
       scope: punctuation.section.method.begin.specman
       set:
         - meta_content_scope: meta.actions.specman
-        - include: actions
         - match: (\})\s*(;)?
           captures:
             1: punctuation.section.method.end.specman
             2: punctuation.terminator.specman
           pop: true
+        - include: actions
 
   # 8.2 var
   # Includes cover item declaration
@@ -569,13 +588,13 @@ contexts:
   structs:
     - match: (?=^\s*(?:struct|unit)\s+{{valid_id}}(?:\s+(like)\s+{{valid_id}})?\s*(?:of\s+\(\s*{{valid_id}}\s*\))?\s*(?:implementing\s+{{valid_id}}(?:\s*(,)\s*{{valid_id}})*)?\s*\{)
       push: struct-declaration
-    - match: (?=^\s*extend(?:\s+{{valid_determinant}}\s*)+\s+(?:{{valid_id}}\s*)?\{)
+    - match: (?=^\s*extend(?:\s+({{valid_determinant}}))+\s+(?:{{valid_id}}\s*)?\{)
       push: struct-declaration
     - match: (?=^(?:package\s*)?interface\s+{{valid_id}}(?:\s+like\s+)?)
       push: struct-declaration
 
   when-inheritance:
-    - match: (?=^\s*when(?:\s+{{valid_determinant}}\s*)+\s*\{)
+    - match: (?=^\s*when(?:\s+({{valid_determinant}}))+\s*\{)
       push: struct-declaration
 
   struct-declaration:
@@ -600,7 +619,7 @@ contexts:
             2: punctuation.terminator.specman
         - include: code
 
-    - match: (\bextend|\bwhen)(?:\s+{{valid_determinant}}\s*)+\s*(\{)
+    - match: (\bextend|\bwhen)(?:\s+({{valid_determinant}}))+\s*(\{)
       captures:
         1: keyword.declaration.class.specman
         2: entity.name.class.specman
@@ -690,7 +709,7 @@ contexts:
         6: storage.type.specman
 
     # Match most field members
-    - match: '({{struct_access}}\s+)?(static\s+)?(const\s+)?([!|~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(:)(?:\s*{{valid_type_no_modifier}}\s*)(;|=)'
+    - match: '({{struct_access}}\s+)?(static\s+)?(const\s+)?([!|~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(?:{{list_length_expr}})?(:)(?:\s*{{valid_type_no_modifier}}\s*)(;|=)'
       captures:
         1: storage.modifier.access.specman
         2: storage.modifier.static.specman
@@ -703,7 +722,7 @@ contexts:
         9: punctuation.terminator.specman
 
     # Match scalar field members if not matched above (no semicolon because valid_scalar_type contains lookahead)
-    - match: '({{struct_access}}\s+)?(static\s+)?(const\s+)?([!|~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(:)(?:\s*{{valid_scalar_type}}\s*)'
+    - match: '({{struct_access}}\s+)?(static\s+)?(const\s+)?([!|~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(?:{{list_length_expr}})?(:)(?:\s*{{valid_scalar_type}}\s*)'
       captures:
         1: storage.modifier.access.specman
         2: storage.modifier.static.specman
@@ -715,7 +734,7 @@ contexts:
         8: storage.type.specman
 
     # Struct/unit member
-    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?([!|~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(:)\s*(?:{{valid_struct_type}})\s*(\bis\s+instance\b)?\s*(;|=)
+    - match: ({{struct_access}}\s+)?(static\s+)?(const\s+)?([!|~]\s*)?(%\s*)?(?:{{valid_id}}\s*)(:)\s*(?:{{valid_struct_type}})(?:\s+(\bis\s+instance\b))?\s*(;|=)
       captures:
         1: storage.modifier.access.specman
         2: storage.modifier.static.specman
@@ -891,24 +910,24 @@ contexts:
         3: punctuation.section.block.begin.specman
       push:
         - meta_content_scope: meta.code_block.specman
-        - include: actions
         - match: (\})\s*(;)?
           captures:
             1: punctuation.section.block.end.specman
             2: punctuation.terminator.specman
           pop: true
+        - include: actions
     - match: (\b{{concurrency_actions}}\b)?\s*\{
       captures:
         1: keyword.control.specman
       scope: punctuation.section.block.begin.specman
       push:
         - meta_content_scope: meta.code_block.specman
-        - include: actions
         - match: (\})\s*(;)?
           captures:
             1: punctuation.section.block.end.specman
             2: punctuation.terminator.specman
           pop: true
+        - include: actions
 
   # This should not be included together with code-blocks, matches list-lterals in selected contexts
   list-literals:
@@ -975,7 +994,7 @@ contexts:
       match: \b(choose|matches|if|then|else|try|case|casex|casez|default)\b
 
     - scope: keyword.other.temporal.specman
-      match: \b(cycle|sample|events|forever|wait|change|negedge|rise|fall|delay|sync|sim|true|detach|eventually|emit)\b
+      match: \b(cycle|sample|event|forever|wait|change|negedge|rise|fall|delay|sync|sim|true|detach|eventually|emit)\b
 
     - scope: keyword.other.define.specman
       match: \b(define|as|computed|verilog|vhdl|variable)\b

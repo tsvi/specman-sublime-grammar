@@ -21,5 +21,9 @@ extend sys {
        range([set_of_values(address_t).max()], "Last address");
    };
 
+   cover done is also {
+      item len using also (ignore = it<2);
+   };
+
 };
 '>
