@@ -50,4 +50,9 @@ bla
 
    };
 
+-- TODO: scope does not get popped
+extend has_blit_info Store_Start vr_ad_sequence {
+   keep start_reg.start == read_only(blit_context.pixelbus_setup.is_selected(static_reg_file.name).as_a(bit));
+};
+
 '>
