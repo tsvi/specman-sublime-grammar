@@ -19,7 +19,8 @@ extend sys {
     @import_python(module_name="plot_i", python_name="addVal")
     addVal(groupName:string, cycle:int,grade:real) is imported;
 
-    l1[20] : list of byte;
+    !l1[20][3] : list of byte;
+    l2 : list of uint;
 
     obj: obj_s is instance;
 
@@ -48,6 +49,11 @@ extend sys {
         assert a==0;
         first of {
             start foo(a+b);
+        };
+
+        all of {
+        		{ first_tcm(); };
+        		{ second_tcm(); };
         };
 
         do sequence keeping { it == seq };
