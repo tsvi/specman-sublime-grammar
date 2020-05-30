@@ -314,7 +314,10 @@ contexts:
       match: \b(and|or|not|now|in|in_table|)\b
 
     - scope: keyword.operator.boolean.specman
-      match: '(&&|\|\||!|=>)'
+      match: '(&&|\|\||!)'
+
+    - scope: keyword.operator.logical.specman
+      match: '(=>)'
 
       # Note: we exclude the delayed assignment operator here because it is already
       # part of the comparison operator match
@@ -409,7 +412,7 @@ contexts:
 
   # 7.2 Invoking methods
   built-in-function-calls:
-    - match: \b({{built_in_functions_optional_parens}})\b(?=\s*(\()?)
+    - match: \s+({{built_in_functions_optional_parens}})\b(?=\s*(\()?)
       scope: support.function.builtin.specman
       push:
         - meta_scope: meta.function-call.builtin.specman
@@ -781,78 +784,77 @@ contexts:
 
     # TODO: extend regexp for full syntax
     # for each [(item-name)] [using index (index-name)] [prev (prev-name)]] in gen-list {constraint-def | nested-for-each; ...}
-    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)?\s*(\bfor\s+each\b)\s*(?:\(\s*{{valid_id}}\s*\)\s*)?(?:\busing\s+index\s*\(\s*{{valid_id}}\s*\)\s*)?(in)\s+(?:{{valid_name}})(?=\s*\{)
+    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+(is)\s+)?(\bsoft\b)?\s*(\bfor\s+each\b)\s*(?:\(\s*{{valid_id}}\s*\)\s*)?(?:\busing\s+index\s*\(\s*{{valid_id}}\s*\)\s*)?(in)\s+(?:{{valid_name}})(?=\s*\{)
       captures:
         1: keyword.other.constraint.specman
         2: entity.name.label.specman
-        3: keyword.modifier.constraint.specman
-        4: keyword.control.specman
-        5: variable.other.specman
+        3: keyword.other.constraint.specman
+        4: keyword.modifier.constraint.specman
+        5: keyword.control.specman
         6: variable.other.specman
-        7: keyword.control.specman
-        8: variable.other.specman
-        9: punctuation.section.constraint_block.begin.specman
+        7: variable.other.specman
+        8: keyword.control.specman
+        9: variable.other.specman
 
     # keep all of <block> (need '{' in same line to detect it)
-    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(all\s+of\b)(?=\s*\{)
+    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+(is)\s+)?(all\s+of\b)(?=\s*\{)
       captures:
         1: keyword.other.constraint.specman
         2: entity.name.label.specman
-        3: keyword.control.specman
-        4: punctuation.section.constraint_block.begin.specman
-
-    # implication with block: keep <expr> => [all of ] <block> (need '{' in same line to detect it)
-    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)?\s*(.*)\s+(=>\s+)(all\s+of\b)?(?=\s*\{)
-      captures:
-        1: keyword.other.constraint.specman
-        2: entity.name.label.specman
-        3: keyword.modifier.constraint.specman
-        # # LHS expression
-        5: keyword.operator.logical.specman
-        6: keyword.control.specman
-        7: punctuation.section.constraint_block.begin.specman
+        3: keyword.other.constraint.specman
+        4: keyword.control.constraint.specman
 
     # implication without block
     # use look-ahead to allow matching the LHS expression elsewhere
-    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)?\s*(?=.*\s*(=>))
+    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+(is)\s+)?(\bsoft\b)?\s*(?=.*\s*(=>))
       captures:
         1: keyword.other.constraint.specman
         2: entity.name.label.specman
-        3: keyword.modifier.constraint.specman
-        5: keyword.operator.logical.specman
+        3: keyword.other.constraint.specman
+        4: keyword.modifier.constraint.specman
       push: constraint-expression
 
     # before
-    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)?\s*(?:{{valid_name}}\s*)(\bbefore\b)\s*(?:{{valid_name}})(;)
+    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+(is)\s+)?(\bsoft\b)?\s*(?:{{valid_name}}\s*)(\bbefore\b)\s*(?:{{valid_name}})(;)
       captures:
         1: keyword.other.constraint.specman
         2: entity.name.label.specman
-        3: keyword.modifier.constraint.specman
-        4: variable.other.specman
-        5: keyword.other.constraint.specman
-        6: variable.other.specman
-        7: punctuation.terminator.specman
+        3: keyword.other.constraint.specman
+        4: keyword.modifier.constraint.specman
+        5: variable.other.specman
+        6: keyword.other.constraint.specman
+        7: variable.other.specman
+        8: punctuation.terminator.specman
 
     # select
-    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)\s*(?:{{valid_name}})\s+(==)\s+(\bselect\b)
+    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+(is)\s+)?(\bsoft\b)\s*(?:{{valid_name}})\s+(==)\s+(\bselect\b)
       captures:
         1: keyword.other.constraint.specman
         2: entity.name.label.specman
-        3: keyword.modifier.constraint.specman
-        4: variable.other.specman
-        5: keyword.operator.assignment.specman
-        6: keyword.other.constraint.specman
+        3: keyword.other.constraint.specman
+        4: keyword.modifier.constraint.specman
+        5: variable.other.specman
+        6: keyword.operator.assignment.specman
+        7: keyword.other.constraint.specman
 
     # All other constraints not matched above
-    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+is\s+)?(\bsoft\b)?\s*
+    - match: (\bkeep\b)\s+(?:{{valid_id}}\s+(is)\s+)?(\bsoft\b)?\s*
       captures:
         1: keyword.other.constraint.specman
         2: entity.name.label.specman
-        3: keyword.modifier.constraint.specman
+        3: keyword.other.constraint.specman
+        4: keyword.modifier.constraint.specman
       push: constraint-expression
 
+  # Expression after keep; also match"=> all of"
   constraint-expression:
     - meta_scope: meta.constraint-expression.specman
+    # implication with block: => [all of ] <block> (need '{' in same line to detect it)
+    - match: (=>\s+)(all\s+of\b)?(?=\s*\{)
+      captures:
+        1: keyword.operator.logical.specman
+        2: keyword.control.constraint.specman
+      pop: true
     - include: priority-scopes
     - include: list-literals
     - match: ;

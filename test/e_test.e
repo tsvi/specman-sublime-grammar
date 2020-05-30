@@ -51,6 +51,11 @@ extend sys {
             start foo(a+b);
         };
 
+        all of {
+        		{ first_tcm(); };
+        		{ second_tcm(); };
+        };
+
         do sequence keeping { it == seq };
 
         var l: list of int = {1;2;7;4}.sort();
